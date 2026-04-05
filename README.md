@@ -1,204 +1,107 @@
-# Whisplay-AI-Chatbot
+# O.A.S.I.S.
 
-<img src="https://docs.pisugar.com/img/whisplay_logo@4x-8.png" alt="Whisplay AI Chatbot" width="200" />
+**Offline AI System for Immediate Survivial** — a fully offline emergency first-aid voice assistant running on Raspberry Pi 5 + Whisplay HAT.
 
-This is a pocket-sized AI chatbot device built using a Raspberry Pi Zero 2w. Just press the button, speak, and it talks back—like a futuristic walkie-talkie with a mind of its own.
+Press the button, speak your emergency, and get evidence-based first-aid guidance — no internet required.
 
-Test Video Playlist:
-[https://www.youtube.com/watch?v=lOVA0Gui-4Q](https://www.youtube.com/playlist?list=PLpTS9YM-tG_mW5H7Xs2EO0qvlAI-Jm1e_)
+---
 
-Tutorial:
-[https://www.youtube.com/watch?v=Nwu2DruSuyI](https://www.youtube.com/watch?v=Nwu2DruSuyI)
-
-Tutorial (offline version build on RPi 5):
-
-[https://youtu.be/kFmhSTh167U](https://youtu.be/kFmhSTh167U)
-
-[https://youtu.be/QNbHdJUW6z8](https://youtu.be/QNbHdJUW6z8)
-
-[https://youtu.be/xGzvFzdBAwc](https://youtu.be/xGzvFzdBAwc)
-
-
-## Hardware
-
-- Raspberry Pi zero 2w (Recommand RRi 5, 8G RAM for offline build)
-- PiSugar Whisplay HAT (including LCD screen, on-board speaker and microphone)
-- PiSugar 3 1200mAh
-
-## Pre-build Image
-
-- Please find the pre-build images in project wiki: https://github.com/PiSugar/whisplay-ai-chatbot/wiki
-
-## Drivers
-
-You need to firstly install the audio drivers for the Whisplay HAT. Follow the instructions in the [Whisplay HAT repository](https://github.com/PiSugar/whisplay).
-
-## Installation Steps
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/PiSugar/whisplay-ai-chatbot.git
-   cd whisplay-ai-chatbot
-   ```
-2. Install dependencies:
-   ```bash
-   bash install_dependencies.sh
-   source ~/.bashrc
-   ```
-   Running `source ~/.bashrc` is necessary to load the new environment variables.
-3. Create a `.env` file based on the `.env.template` file and fill in the necessary environment variables.
-4. Build the project:
-   ```bash
-   bash build.sh
-   ```
-5. Start the chatbot service:
-   ```bash
-   bash run_chatbot.sh
-   ```
-6. Optionally, set up the chatbot service to start on boot:
-   ```bash
-   sudo bash startup.sh
-   ```
-   Please note that this will disable the graphical interface and set the system to multi-user mode, which is suitable for headless operation.
-   You can find the output logs at `chatbot.log`. Running `tail -f chatbot.log` will also display the logs in real-time.
-
-## Build After Code Changes
-
-If you make changes to the node code or just pull the new code from this repository, you need to rebuild the project. You can do this by running:
-
-```bash
-bash build.sh
-```
-
-If If you encounter `ModuleNotFoundError` or there's new third-party libraries to the python code, please run the following command to update the dependencies for python:
-```
-cd python
-pip install -r requirements.txt --break-system-packages
-```
-
-The env template may be updated from time to time. If you want to upgrade your existing `.env` file based on the latest `.env.template`, you can run the following command:
-
-```bash
-bash upgrade-env.sh
-```
-
-## Update Environment Variables
-
-If you need to update the environment variables, you can edit the `.env` file directly. After making changes, please restart the chatbot service with:
-
-```bash
-sudo systemctl restart chatbot.service
-```
-
-## Image Generation
-
-You can enable image generation by setting the `IMAGE_GENERATION_SERVER` variable in the `.env` file. Options include: OPENAI, GEMINI, VOLCENGINE.
-
-Then you can use prompts like "A children's book drawing of a veterinarian using a stethoscope to listen to the heartbeat of a baby otter." to generate images.
-
-The generated images will be displayed on the screen and saved in the `data/images` folder.
-
-## Display Battery Level
-
-The battery level display depends on the pisugar-power-manager. If you are using PiSugar2 or PiSugar3, you need to install the pisugar-power-manager first. You can find the installation instructions in the [PiSugar Power Manager repository](https://github.com/PiSugar/pisugar-power-manager-rs).
-
-Or use the following command to install it:
-
-```bash
-wget https://cdn.pisugar.com/release/pisugar-power-manager.sh
-bash pisugar-power-manager.sh -c release
-```
-
-## Data Folder
-
-The chatbot saves conversation history and generated images in the `data` folder. It's a temporal folder and can be deleted if you want to clear the history.
-
-## Enclosure
-
-[Whisplay Chatbot Case for Pi02](https://github.com/PiSugar/suit-cases/tree/main/pisugar3-whisplay-chatbot)
-
-[Whisplay Chatbot Case (FDM) for Pi02](https://github.com/PiSugar/suit-cases/tree/main/pisugar3-whisplay-chatbot-fdm)
-
-[Whisplay Chatbot Case (FDM) for Pi5](https://github.com/PiSugar/suit-cases/tree/main/pi5-whisplay-chatbot)
-
-[Whisplay Chatbot Case (FDM) for Pi5 & LLM8850](https://github.com/PiSugar/suit-cases/tree/main/pi5-whisplay-chatbot-llm8850)
-
-## LLM8850 Support
-
-If you have a LLM8850 AI Accelerator, you can set up the LLM8850 services for local ASR, TTS, and LLM API to enable offline capabilities.
-
-Please refer to the [LLM8850 Integration Guide](https://github.com/PiSugar/whisplay-ai-chatbot/wiki/LLM8850-Integration) for detailed setup instructions.
-
-## O.A.S.I.S. — Offline AI Survival & First-aid Kit (RAG)
-
-This fork adds a 3-Stage Hybrid RAG pipeline optimized for offline emergency first-aid on Raspberry Pi 5.
-
-### Architecture
+## How It Works
 
 ```
-Voice Input (Whisper ASR)
-  → RAG Retrieval (Python Flask :5001)
-      Stage 1: FAISS vector search  — gte-small 384-dim, top-20
-      Stage 2: Hybrid re-ranking    — cosine 0.6 + BM25 lexical 0.4, top-5
-      Stage 3: Context compression  — sentence-level pruning
+Voice Input (Whisper STT)
+  → Intent Classifier (Python :5002)   — medical intent + severity triage
+  → RAG Pipeline     (Python :5001)    — 3-stage hybrid retrieval from first-aid manuals
+      Stage 1: Medical keyword lexical filter  (inverted index, top-50)
+      Stage 2: Hybrid re-ranking               (cosine 0.6 + BM25 0.4, top-4)
+      Stage 3: Context compression             (sentence-level pruning, 20–40% token reduction)
   → LLM (gemma3:1b via Ollama)
   → Voice Output (Piper TTS)
 ```
 
-**Knowledge base:** WHO Basic Emergency Care 2018 (7 files) + Red Cross Wilderness First Aid (10 files) = 317 chunks
-
-**Validation:** 109/109 tests pass — retrieval accuracy, safety, coverage, edge cases, latency (~32ms avg on PC)
-
-### Running the RAG Pipeline
-
-```bash
-# 1. Build the knowledge index (first time or after adding documents)
-# NOTE for MacOS Users: If you get a 'segmentation fault', use: bash reindex.sh
-bash index_knowledge.sh
-
-# 2. Start services in order
-ollama serve                           # LLM (gemma3:1b)
-cd python/oasis-rag && python app.py   # RAG service (:5001)
-bash run_chatbot.sh                    # Node.js chatbot
-
-# 3. Run validation tests
-cd python/oasis-rag && python validation/run_all.py
-```
-
-> [!TIP]
-> **MacOS Setup Note**:
-> If you are on an Apple Silicon Mac, always use the provided `python/oasis-rag/reindex.sh` script to update your index. This script sets `TOKENIZERS_PARALLELISM=false` to prevent crashes during model loading.
-
-### RAG Fallback
-
-If the RAG service is unavailable, `src/cloud-api/local/oasis-matcher-node.ts` provides lightweight protocol matching using embedded vectors (no server required).
+**Knowledge base:** WHO Basic Emergency Care 2018 + Red Cross Wilderness First Aid — 317 chunks, validated across 109 test cases.
 
 ---
 
-## Goals
+## Hardware
 
-- Integrate the tool with the API ✅
-- Enable the AI assistant to adjust the volume autonomously ✅
-- Reset the conversation history if there is no speech for five minutes ✅
-- Support local llm server ✅
-- Support local asr (whisper/vosk) ✅
-- Support local tts (piper) ✅
-- Support image generation (openai/gemini/volcengine) ✅
-- Refactor python render thread, better performance ✅
-- Add Google Gemini API support ✅
-- Add Grok API support ✅
-- RPI camera support ✅
-- Support LLM8850 whisper ✅
-- Support LLM8850 melottsTTS ✅
-- Support LLM8850 Qwen3 llm api (not support tool) ✅
-- Support LLM8850 FastVLM
-- Support LLM8850 image generation
-- Support speaker recognition
+- Raspberry Pi 5 (8 GB RAM recommended)
+- PiSugar Whisplay HAT (LCD, speaker, microphone)
+- PiSugar 3 battery
 
-## Star History
+---
 
-[![Star History Chart](https://api.star-history.com/svg?repos=PiSugar/whisplay-ai-chatbot&type=date&legend=bottom-right)](https://www.star-history.com/#PiSugar/whisplay-ai-chatbot&type=date&legend=bottom-right)
+## Installation
+
+```bash
+# 1. Install audio drivers
+# Follow: https://github.com/PiSugar/whisplay
+
+# 2. Clone and install dependencies
+git clone <repo-url>
+cd oasis
+bash install_dependencies.sh
+source ~/.bashrc
+
+# 3. Configure environment
+cp .env.template .env
+# Edit .env with your settings
+
+# 4. Build TypeScript layer
+bash build.sh
+
+# 5. Build knowledge index
+bash index_knowledge.sh
+```
+
+---
+
+## Running
+
+```bash
+ollama serve                              # Start LLM (gemma3:1b)
+cd python/oasis-rag && python app.py      # RAG service      :5001
+cd python/oasis-classify && python app.py # Classifier service :5002
+bash run_chatbot.sh                       # Node.js chatbot layer
+```
+
+To start on boot (headless):
+```bash
+sudo bash startup.sh
+```
+
+---
+
+## Project Structure
+
+| Path | Description |
+|------|-------------|
+| `src/core/ChatFlow.ts` | Main loop: button → STT → backend → LLM → TTS |
+| `src/core/OasisAdapter.ts` | Backend result → LLM system prompt (fallback chain) |
+| `python/oasis-rag/` | 3-Stage Hybrid RAG pipeline (FAISS + gte-small) |
+| `python/oasis-classify/` | Medical intent classifier + pre-generated manual dispatch |
+| `data/knowledge/` | Validated first-aid source documents |
+| `docs/` | Architecture, testing, roadmap, and decisions |
+
+---
+
+## Running Tests
+
+```bash
+cd python/oasis-rag && python validation/run_all.py
+```
+
+---
+
+## Rebuilding After Changes
+
+```bash
+bash build.sh           # TypeScript
+bash index_knowledge.sh # Knowledge index (after adding documents to data/knowledge/)
+```
+
+---
 
 ## License
 
-[GPL-3.0](https://github.com/PiSugar/whisplay-ai-chatbot?tab=GPL-3.0-1-ov-file#readme)
+[GPL-3.0](LICENSE)
