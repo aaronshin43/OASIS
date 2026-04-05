@@ -6,6 +6,16 @@ from __future__ import annotations
 import os
 
 # ---------------------------------------------------------------------------
+# Offline mode — prevent HuggingFace Hub network calls at runtime.
+# The embedding model (gte-small) is expected to be pre-downloaded in the
+# HF cache. On Pi5 there is no internet, so any Hub connection attempt
+# causes a startup error. setdefault() allows overriding from the shell
+# (e.g. HF_HUB_OFFLINE=0 python build_centroids.py) when re-downloading.
+# ---------------------------------------------------------------------------
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+# ---------------------------------------------------------------------------
 # Classification thresholds
 # ---------------------------------------------------------------------------
 
