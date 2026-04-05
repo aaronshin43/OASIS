@@ -96,6 +96,23 @@ def _cosine_scores(query_vec: np.ndarray, centroids: np.ndarray) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
+# Warmup — call at service startup to avoid cold-start latency on first query
+# ---------------------------------------------------------------------------
+
+def warmup() -> None:
+    """Eagerly load the embedding model and centroids.
+
+    Call this once at service startup so the first real query does not
+    incur model-initialization latency (~1-2 s on Pi5).
+    """
+    import logging
+    logging.getLogger(__name__).info("[Classify] warming up embedding model...")
+    _get_model()
+    _get_centroids()
+    logging.getLogger(__name__).info("[Classify] warmup complete.")
+
+
+# ---------------------------------------------------------------------------
 # classify() — main entry point
 # ---------------------------------------------------------------------------
 

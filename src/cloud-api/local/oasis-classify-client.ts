@@ -10,8 +10,8 @@
  *  - All methods must resolve (never reject) so callers can use
  *    simple null/empty checks instead of try/catch.
  *  - On any network or timeout error: return a safe fallback DispatchResult.
- *  - Timeout default: OASIS_CLASSIFY_TIMEOUT_MS env (fallback 3000 ms).
- *    3 seconds matches the Pi5 latency target for the classify pipeline.
+ *  - Timeout default: OASIS_CLASSIFY_TIMEOUT_MS env (fallback 15000 ms).
+ *    15 seconds covers model warmup on first request; steady-state is ~10-100 ms.
  */
 
 import axios, { AxiosError } from "axios";
@@ -22,7 +22,7 @@ const BASE_URL: string =
     process.env.OASIS_CLASSIFY_SERVICE_URL ?? "http://localhost:5002";
 
 const TIMEOUT_MS: number =
-    parseInt(process.env.OASIS_CLASSIFY_TIMEOUT_MS ?? "3000", 10);
+    parseInt(process.env.OASIS_CLASSIFY_TIMEOUT_MS ?? "15000", 10);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
