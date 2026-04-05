@@ -37,18 +37,20 @@ const ollamaPredictNum = process.env.OLLAMA_PREDICT_NUM
 const enableThinking = process.env.ENABLE_THINKING === "true";
 
 // OASIS mode: constrained generation options for medical accuracy
+// stop: ["**"] was removed — it caused truncation when the model opened a bold span
+// ("1. **Call 911**"), cutting output at "1. ". sanitizeOasisChunk strips ** anyway.
 const isOasisMode = process.env.ENABLE_OASIS_MATCHER === "true" || true;
 const oasisOptions = isOasisMode
   ? {
       num_predict: 300,
       temperature: 0.25,
-      stop: ["**"],
     }
   : undefined;
 
 const llmServer = process.env.LLM_SERVER || "";
 
-const chatHistoryFileName = `ollama_chat_history_${moment().format(
+// Non-OASIS (conversation) mode: one file per session.
+const sessionChatHistoryFileName = `ollama_chat_history_${moment().format(
   "YYYY-MM-DD_HH-mm-ss",
 )}.json`;
 
@@ -110,6 +112,11 @@ const chatWithLLMStream: ChatWithLLMStreamFunction = async (
   // OASIS mode: each emergency query is fully independent — reset history every time
   // to prevent prior emergency context from contaminating the current response.
   const incomingSystem = (inputMessages as OllamaMessage[]).find(m => m.role === "system");
+  // OASIS queries each get a unique timestamped file so no query overwrites another.
+  const chatHistoryFileName = (isOasisMode && incomingSystem)
+    ? `ollama_chat_history_${moment().format("YYYY-MM-DD_HH-mm-ss-SSS")}.json`
+    : sessionChatHistoryFileName;
+
   if (isOasisMode && incomingSystem) {
     messages.length = 0;
     messages.push(incomingSystem);
@@ -145,7 +152,7 @@ const chatWithLLMStream: ChatWithLLMStreamFunction = async (
           role: msg.role,
           content: msg.content,
         })),
-        think: enableThinking,
+        think: isOasisMode ? false : enableThinking,
         stream: true,
         options: oasisOptions ?? {
           temperature: 0.7,
