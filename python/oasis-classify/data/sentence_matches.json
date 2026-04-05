@@ -16,6 +16,17 @@
   "she is unconscious and not responding to anything": "cpr",
   "the person turned blue and stopped breathing": "cpr",
 
+  "how do i use an aed": "cpr",
+  "where do i place the aed pads": "cpr",
+  "the aed says press the shock button": "cpr",
+  "how do i attach the aed electrodes": "cpr",
+  "aed says no shock advised what do i do next": "cpr",
+  "how do i operate a defibrillator": "cpr",
+  "i found an aed what do i do with it": "cpr",
+  "aed is ready to shock do i press it": "cpr",
+  "how do i turn on the aed and use it": "cpr",
+  "where do i stick the aed pads on the body": "cpr",
+
   "how do i stop the bleeding": "bleeding",
   "there is so much blood i dont know what to do": "bleeding",
   "the wound wont stop bleeding": "bleeding",
