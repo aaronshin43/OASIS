@@ -1,3 +1,4 @@
+from __future__ import annotations
 import time
 from PyQt5.QtCore import QThread, pyqtSignal
 from clients import llm_client, classify_client
