@@ -100,29 +100,6 @@ function getActual(dispatch: Awaited<ReturnType<typeof dispatchQuery>>): string 
     return dispatch.raw.category ?? dispatch.mode;
 }
 
-async function getLLMResponse(
-    systemPrompt: string,
-    query: string,
-): Promise<{ response: string; ms: number }> {
-    const messages: Message[] = [
-        { role: "system", content: systemPrompt },
-        { role: "user",   content: query },
-    ];
-    resetChatHistory();
-    const start = Date.now();
-    let response = "";
-
-    await new Promise<void>((resolve) => {
-        chatWithLLMStream(
-            messages,
-            (chunk) => { response += chunk; },
-            () => resolve(),
-            () => {},
-        );
-    });
-
-    return { response: response.trim(), ms: Date.now() - start };
-}
 
 // ── Runner ────────────────────────────────────────────────────────────────────
 
@@ -164,10 +141,26 @@ async function runBatch(withLLM: boolean): Promise<void> {
             passed:         ok,
         };
 
-        if (withLLM && (dispatch.mode === "llm_prompt" || dispatch.mode === "triage_prompt") && dispatch.systemPrompt) {
-            const { response, ms } = await getLLMResponse(dispatch.systemPrompt, tc.query);
-            result.llm_response = response;
-            result.llm_ms = ms;
+        if (withLLM && (dispatch.mode === "llm_prompt" || dispatch.mode === "triage_prompt")) {
+            const sysPrompt = dispatch.systemPrompt;
+            if (sysPrompt) {
+                process.stdout.write("     [LLM] ");
+                const start = Date.now();
+                let llmOut = "";
+                resetChatHistory();
+                // Await the Promise returned by chatWithLLMStream directly —
+                // more reliable than relying on endCallback to resolve an outer Promise.
+                await chatWithLLMStream(
+                    [{ role: "system", content: sysPrompt }, { role: "user", content: tc.query }] as Message[],
+                    (chunk) => { process.stdout.write(chunk); llmOut += chunk; },
+                    () => {},
+                    () => {},
+                );
+                const llm_ms = Date.now() - start;
+                process.stdout.write(`\n     [${llm_ms}ms]\n`);
+                result.llm_response = llmOut.trim();
+                result.llm_ms = llm_ms;
+            }
         }
 
         results.push(result);
