@@ -8,9 +8,9 @@ For subsystem-specific rules, navigate to the relevant subfolder — each has it
 ## Critical Rules
 
 - **All code, comments, and commit messages must be written in English.**
-- **Never generate medical advice directly** — only reference validated manuals from `data/knowledge/`.
+- **Never generate medical advice directly** — only reference validated manuals from `python/oasis-classify/data/manuals/`.
 - **Pi5 memory budget: total pipeline ≤ 4.5 GB** — do not introduce models or dependencies that exceed this.
-- **Do not modify `data/rag_index/`** — it is a build artifact; regenerate via `bash index_knowledge.sh`.
+- **Do not modify `data/centroids.npy`** — it is a build artifact; regenerate via `python build_centroids.py`.
 
 ---
 
@@ -18,13 +18,12 @@ For subsystem-specific rules, navigate to the relevant subfolder — each has it
 
 **O.A.S.I.S.** (Offline AI Survival & first-aid kIt System) — fully offline emergency first-aid assistant running on Raspberry Pi 5 + Whisplay HAT.
 
-**Stack:** Whisper STT → Python backend (:5001 / :5002) → gemma3:1b (Ollama) → Piper TTS, orchestrated by a Node.js + TypeScript chatbot layer.
+**Stack:** Whisper STT → oasis-classify (:5002) → gemma3:1b (Ollama) → Piper TTS, orchestrated by a Node.js + TypeScript chatbot layer.
 
-**Two independent Python backends — read the relevant CLAUDE.md before working in either:**
+**Python backend:**
 
 | Folder | Purpose | Port | CLAUDE.md |
 |--------|---------|------|-----------|
-| `python/oasis-rag/` | 3-Stage Hybrid RAG pipeline (FAISS + gte-small) | :5001 | [`python/oasis-rag/CLAUDE.md`](python/oasis-rag/CLAUDE.md) |
 | `python/oasis-classify/` | Medical intent classifier + pre-generated manual dispatch | :5002 | [`python/oasis-classify/CLAUDE.md`](python/oasis-classify/CLAUDE.md) |
 
 ---
@@ -33,11 +32,10 @@ For subsystem-specific rules, navigate to the relevant subfolder — each has it
 
 | File | Role |
 |------|------|
-| `src/core/ChatFlow.ts` | Main loop: button → STT → backend → LLM → TTS |
-| `src/core/OasisAdapter.ts` | Backend result → LLM system prompt (fallback chain) |
+| `src/core/ChatFlow.ts` | Main loop: button → STT → classify → LLM → TTS |
+| `src/core/OasisAdapter.ts` | Classify result → LLM system prompt + safe fallback |
 | `src/cloud-api/server.ts` | ASR/LLM/TTS provider router (reads `.env`) |
-| `src/cloud-api/local/oasis-rag-client.ts` | RAG HTTP client |
-| `src/cloud-api/local/oasis-matcher-node.ts` | Embedded fallback matcher (no server required) |
+| `src/cloud-api/local/oasis-classify-client.ts` | Classify HTTP client (:5002) |
 
 New ASR/LLM/TTS providers go in `src/cloud-api/local/` or a named subfolder — never in `server.ts` directly.
 
@@ -46,8 +44,7 @@ New ASR/LLM/TTS providers go in `src/cloud-api/local/` or a named subfolder — 
 ## Build
 
 ```bash
-bash build.sh           # TypeScript: rm -rf dist && tsc
-bash index_knowledge.sh # Rebuild FAISS index after knowledge base changes
+bash build.sh  # TypeScript: rm -rf dist && tsc
 ```
 
 ---
@@ -56,8 +53,8 @@ bash index_knowledge.sh # Rebuild FAISS index after knowledge base changes
 
 | File | Read when... |
 |------|-------------|
-| `docs/architecture.md` | Modifying RAG stages, context injection signals, Flask API, or KB document format |
+| `docs/architecture.md` | Modifying the classify pipeline, dispatch modes, Flask API, or manual format |
 | `docs/testing.md` | Writing or debugging tests; looking up test IDs |
 | `docs/roadmap.md` | Investigating known bugs, planning phases, or choosing an LLM upgrade |
-| `docs/decisions.md` | Before changing embedding model, vector DB, chunking strategy, or LLM |
-| `docs/entrypoints.md` | Looking up what any file in `python/oasis-rag/` does |
+| `docs/decisions.md` | Before changing classifier thresholds, LLM, or dispatch strategy |
+| `docs/entrypoints.md` | Looking up what any file in `python/oasis-classify/` does |
