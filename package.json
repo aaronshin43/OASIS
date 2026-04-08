@@ -8,7 +8,6 @@
     "upgrade-env": "node -r ts-node/register -r tsconfig-paths/register dist/upgrade-env.js",
     "postinstall": "patch-package",
     "test:ollama": "ts-node -r tsconfig-paths/register src/test/ollama-text-test.ts",
-    "test:oasis": "ts-node -r tsconfig-paths/register src/test/oasis-test.ts",
     "test:classify": "ts-node -r tsconfig-paths/register src/test/classify-text-test.ts",
     "test:classify:batch": "ts-node -r tsconfig-paths/register src/test/classify-batch-test.ts",
     "test:classify:report": "python scripts/batch_report.py",
