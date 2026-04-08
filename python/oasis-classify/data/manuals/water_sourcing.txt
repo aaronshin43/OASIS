@@ -1,9 +1,12 @@
 Category: Water Sourcing / Dehydration
 
-- Recognize dehydration: dark urine, dizziness, dry mouth, rapid heart rate.
-- Moving water (streams) is safer; purify all wild water before drinking.
-- Boil: rolling boil 1 min; above 2000 m altitude, boil 3 minutes.
-- Chemical: iodine or chlorine tablets per instructions; wait 30 min.
-- Severe dehydration: give fluids slowly; call 911 if confused or unconscious.
-- Do not drink seawater -- it accelerates dehydration and damages organs.
-- Do not drink urine -- it concentrates waste and worsens dehydration.
+STEPS:
+1. Recognize dehydration: dark urine, dizziness, dry mouth, rapid heart rate.
+2. Moving water (streams) is safer; purify all wild water before drinking.
+3. Boil: rolling boil 1 min; above 2000 m altitude, boil 3 minutes.
+4. Chemical: iodine or chlorine tablets per instructions; wait 30 min.
+5. Severe dehydration: give fluids slowly; call 911 if confused or unconscious.
+
+NEVER DO:
+- Do NOT drink seawater -- it accelerates dehydration and damages organs.
+- Do NOT drink urine -- it concentrates waste and worsens dehydration.

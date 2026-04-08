@@ -1,12 +1,9 @@
 Category: Wildfire Escape
 
-STEPS:
-1. Check wind direction — fire travels fastest uphill and downwind.
-2. Move perpendicular to the fire's path to reach an escape route.
-3. Protect airway: wet a cloth and hold over nose and mouth to filter smoke.
-4. Stay low in heavy smoke — air is cooler and cleaner near the ground.
-5. If escape is cut off, find a ditch or cleared area with minimal vegetation; lie face-down, hands protecting face.
-
-NEVER DO:
-- Do NOT run uphill toward a wildfire — fire moves uphill faster than you can run.
-- Do NOT ignore wind shifts — fire direction can change and cut off escape routes suddenly.
+- Check wind direction — fire travels fastest uphill and downwind.
+- Move perpendicular to the fire's path to reach an escape route.
+- Protect airway: wet a cloth and hold over nose and mouth to filter smoke.
+- Stay low in heavy smoke — air is cooler and cleaner near the ground.
+- If escape is cut off, find a ditch or cleared area with minimal vegetation; lie face-down, hands protecting face.
+- Do not run uphill toward a wildfire — fire moves uphill faster than you can run.
+- Do not ignore wind shifts — fire direction can change and cut off escape routes suddenly.

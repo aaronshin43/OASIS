@@ -1,9 +1,12 @@
 Category: Diabetic Emergency
 
-- If conscious and able to swallow, give 15-20 g fast-acting sugar immediately.
-- Use glucose tablets, juice, or sugary drink; have person sit and rest.
-- Repeat sugar if no improvement after 15 minutes.
-- After improvement, give complex carbohydrate snack to maintain blood sugar.
-- Call 911 if unconscious, cannot swallow, or does not improve.
-- Do not give food or drink to an unconscious person.
-- Do not give insulin without a blood glucose reading.
+STEPS:
+1. If conscious and able to swallow, give 15-20 g fast-acting sugar immediately.
+2. Use glucose tablets, juice, or sugary drink; have person sit and rest.
+3. Repeat sugar if no improvement after 15 minutes.
+4. After improvement, give complex carbohydrate snack to maintain blood sugar.
+5. Call 911 if unconscious, cannot swallow, or does not improve.
+
+NEVER DO:
+- Do NOT give food or drink to an unconscious person.
+- Do NOT give insulin without a blood glucose reading.

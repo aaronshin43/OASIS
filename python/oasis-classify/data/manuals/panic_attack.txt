@@ -1,9 +1,12 @@
 Category: Panic Attack
 
-- Stay calm; speak slowly and reassuringly.
-- Remind them: this feeling is not dangerous and will pass.
-- Coach slow breathing: inhale 4 counts, hold 4, exhale 4, hold 4. Repeat.
-- If breathing too hard, try grounding: name 5 things you see, 4 touch, 3 hear.
-- If chest pain, arm pain, or symptoms last over 20 minutes, call 911.
-- Do not just say calm down -- guide them through breathing instead.
-- Do not restrain or crowd the person.
+STEPS:
+1. Stay calm; speak slowly and reassuringly.
+2. Remind them: this feeling is not dangerous and will pass.
+3. Coach slow breathing: inhale 4 counts, hold 4, exhale 4, hold 4. Repeat.
+4. If breathing too hard, try grounding: name 5 things you see, 4 touch, 3 hear.
+5. If chest pain, arm pain, or symptoms last over 20 minutes, call 911.
+
+NEVER DO:
+- Do NOT just say calm down -- guide them through breathing instead.
+- Do NOT restrain or crowd the person.

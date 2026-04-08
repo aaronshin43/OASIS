@@ -1,9 +1,12 @@
 Category: Abdominal Injury
 
-- Call 911 immediately.
-- Lay person on back, knees slightly bent to relax abdominal muscles.
-- If organs are protruding, cover with clean cloth moistened with clean water.
-- Cover moist dressing loosely with plastic wrap to retain moisture.
-- Keep person warm to prevent shock.
-- Do not push protruding organs back inside.
-- Do not give food, drink, or oral medication before surgery.
+STEPS:
+1. Call 911 immediately.
+2. Lay person on back, knees slightly bent to relax abdominal muscles.
+3. If organs are protruding, cover with clean cloth moistened with clean water.
+4. Cover moist dressing loosely with plastic wrap to retain moisture.
+5. Keep person warm to prevent shock.
+
+NEVER DO:
+- Do NOT push protruding organs back inside.
+- Do NOT give food, drink, or oral medication before surgery.

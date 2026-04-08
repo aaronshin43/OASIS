@@ -1,9 +1,12 @@
 Category: Sprain / Dislocation
 
-- Stop activity immediately; rest the injured joint.
-- Apply ice wrapped in cloth for 20 minutes to reduce swelling.
-- Apply a compression bandage firmly but not too tightly.
-- Elevate the injured limb above heart level.
-- For dislocation: immobilize in position found; do not attempt to reduce it.
-- Do not attempt to pop a dislocated joint back without medical training.
-- Do not apply heat in the first 24-48 hours — it increases swelling.
+STEPS:
+1. Stop activity immediately; rest the injured joint.
+2. Apply ice wrapped in cloth for 20 minutes to reduce swelling.
+3. Apply a compression bandage firmly but not too tightly.
+4. Elevate the injured limb above heart level.
+5. For dislocation: immobilize in position found; do not attempt to reduce it.
+
+NEVER DO:
+- Do NOT attempt to pop a dislocated joint back without medical training.
+- Do NOT apply heat in the first 24-48 hours — it increases swelling.

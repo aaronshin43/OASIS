@@ -1,9 +1,12 @@
 Category: Heat Stroke / Heat Exhaustion
 
-- Call 911 for heat stroke (hot dry skin, confusion, no sweating, high temperature).
-- Move person immediately to a cool shaded or air-conditioned area.
-- Remove excess clothing.
-- Cool rapidly: apply ice packs to neck, armpits, and groin; fan while misting with cool water.
-- If fully conscious and able to swallow, give cool water to drink.
-- Do not delay cooling while waiting for emergency services — start immediately.
-- Do not give fluids to an unconscious person or one who cannot swallow.
+STEPS:
+1. Call 911 for heat stroke (hot dry skin, confusion, no sweating, high temperature).
+2. Move person immediately to a cool shaded or air-conditioned area.
+3. Remove excess clothing.
+4. Cool rapidly: apply ice packs to neck, armpits, and groin; fan while misting with cool water.
+5. If fully conscious and able to swallow, give cool water to drink.
+
+NEVER DO:
+- Do NOT delay cooling while waiting for emergency services — start immediately.
+- Do NOT give fluids to an unconscious person or one who cannot swallow.

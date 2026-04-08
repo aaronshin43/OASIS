@@ -1,9 +1,12 @@
 Category: Hypothermia
 
-- Call 911 if person is severely hypothermic, unresponsive, or not breathing.
-- Move to a warm dry location; remove wet clothing and replace with dry layers.
-- Cover including head with blankets; rewarm core first.
-- Apply warm packs wrapped in cloth to neck, armpits, and groin.
-- If unresponsive and not breathing, begin CPR — a cold heart can still be resuscitated.
-- Do not rub limbs — cold blood from extremities can trigger cardiac arrest.
-- Do not give alcohol — it causes further heat loss.
+STEPS:
+1. Call 911 if person is severely hypothermic, unresponsive, or not breathing.
+2. Move to a warm dry location; remove wet clothing and replace with dry layers.
+3. Cover including head with blankets; rewarm core first.
+4. Apply warm packs wrapped in cloth to neck, armpits, and groin.
+5. If unresponsive and not breathing, begin CPR — a cold heart can still be resuscitated.
+
+NEVER DO:
+- Do NOT rub limbs — cold blood from extremities can trigger cardiac arrest.
+- Do NOT give alcohol — it causes further heat loss.

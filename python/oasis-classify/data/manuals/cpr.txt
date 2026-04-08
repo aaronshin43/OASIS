@@ -1,9 +1,12 @@
 Category: CPR / Cardiac Arrest
 
-- Confirm unresponsiveness; call 911 immediately.
-- Tilt head back, lift chin, check breathing for no more than 10 seconds.
-- Place heel of hand on center of chest; compress at least 5 cm deep.
-- Compress at 100-120 per minute; give 30 compressions then 2 rescue breaths.
-- Use AED as soon as available — turn on and follow all voice prompts.
-- Do not stop compressions repeatedly to check for a pulse.
-- Do not compress too slowly or shallowly — depth and rate are critical for blood flow.
+STEPS:
+1. Confirm unresponsiveness; call 911 immediately.
+2. Tilt head back, lift chin, check breathing for no more than 10 seconds.
+3. Place heel of hand on center of chest; compress at least 5 cm deep.
+4. Compress at 100-120 per minute; give 30 compressions then 2 rescue breaths.
+5. Use AED as soon as available — turn on and follow all voice prompts.
+
+NEVER DO:
+- Do NOT stop compressions repeatedly to check for a pulse.
+- Do NOT compress too slowly or shallowly — depth and rate are critical for blood flow.

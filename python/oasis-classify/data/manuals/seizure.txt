@@ -1,9 +1,12 @@
 Category: Seizure / Epilepsy
 
-- Call 911 if seizure lasts more than 5 minutes or person does not regain consciousness.
-- Clear hard objects away; place something soft under the person's head.
-- Time the seizure from the start.
-- Gently turn person onto their side to keep airway clear.
-- After seizure stops, check breathing; begin CPR if not breathing.
-- Do not put anything in the person's mouth — they cannot swallow their tongue.
-- Do not hold the person down or restrain them during a seizure.
+STEPS:
+1. Call 911 if seizure lasts more than 5 minutes or person does not regain consciousness.
+2. Clear hard objects away; place something soft under the person's head.
+3. Time the seizure from the start.
+4. Gently turn person onto their side to keep airway clear.
+5. After seizure stops, check breathing; begin CPR if not breathing.
+
+NEVER DO:
+- Do NOT put anything in the person's mouth — they cannot swallow their tongue.
+- Do NOT hold the person down or restrain them during a seizure.

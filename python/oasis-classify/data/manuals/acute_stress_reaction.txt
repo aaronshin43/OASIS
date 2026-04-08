@@ -1,9 +1,12 @@
 Category: Acute Stress Reaction
 
-- Remove person from ongoing danger before addressing psychological symptoms.
-- Speak slowly using their name; use short, calm sentences.
-- Offer warmth, water, a blanket — physical comfort anchors awareness.
-- Use grounding if dissociated: ask what they can see or feel right now.
-- Call 911 if severely unresponsive or unable to care for themselves.
-- Do not pressure them to describe or relive the traumatic event.
-- Do not leave someone who is severely dissociated or unresponsive alone.
+STEPS:
+1. Remove person from ongoing danger before addressing psychological symptoms.
+2. Speak slowly using their name; use short, calm sentences.
+3. Offer warmth, water, a blanket — physical comfort anchors awareness.
+4. Use grounding if dissociated: ask what they can see or feel right now.
+5. Call 911 if severely unresponsive or unable to care for themselves.
+
+NEVER DO:
+- Do NOT pressure them to describe or relive the traumatic event.
+- Do NOT leave someone who is severely dissociated or unresponsive alone.

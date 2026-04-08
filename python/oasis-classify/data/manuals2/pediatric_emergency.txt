@@ -1,12 +1,9 @@
 Category: Pediatric Emergency
 
-STEPS:
-1. Call 911 immediately.
-2. Infant CPR (under 1 year): 2 fingers on chest center, compress 4 cm at 100-120/min.
-3. Infant rescue breaths: slight head tilt, cover mouth and nose, give small puffs.
-4. Child CPR (1 year+): one or two hands, compress one-third chest depth.
-5. Infant choking: 5 back blows between shoulder blades, then 5 chest thrusts.
-
-NEVER DO:
-- Do NOT perform abdominal thrusts on an infant under 1 year.
-- Do NOT give aspirin to a child -- risk of Reye syndrome.
+- Call 911 immediately.
+- Infant CPR (under 1 year): 2 fingers on chest center, compress 4 cm at 100-120/min.
+- Infant rescue breaths: slight head tilt, cover mouth and nose, give small puffs.
+- Child CPR (1 year+): one or two hands, compress one-third chest depth.
+- Infant choking: 5 back blows between shoulder blades, then 5 chest thrusts.
+- Do not perform abdominal thrusts on an infant under 1 year.
+- Do not give aspirin to a child -- risk of Reye syndrome.

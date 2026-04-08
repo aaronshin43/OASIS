@@ -1,12 +1,9 @@
 Category: Shock
 
-STEPS:
-1. Call 911 immediately; treat underlying cause (apply direct pressure to severe bleeding).
-2. Lay person flat on their back.
-3. Elevate legs 20-30 cm unless head, spine, chest, or lower limb injury prevents it.
-4. Keep person warm with a blanket; loosen tight clothing at neck and chest.
-5. Monitor breathing and pulse; be prepared to start CPR.
-
-NEVER DO:
-- Do NOT raise the legs if head, chest, or spinal injury is suspected.
-- Do NOT give food or drink by mouth.
+- Call 911 immediately; treat underlying cause (apply direct pressure to severe bleeding).
+- Lay person flat on their back.
+- Elevate legs 20-30 cm unless head, spine, chest, or lower limb injury prevents it.
+- Keep person warm with a blanket; loosen tight clothing at neck and chest.
+- Monitor breathing and pulse; be prepared to start CPR.
+- Do not raise the legs if head, chest, or spinal injury is suspected.
+- Do not give food or drink by mouth.

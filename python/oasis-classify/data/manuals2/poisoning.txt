@@ -1,12 +1,9 @@
 Category: Poisoning / Toxic Ingestion
 
-STEPS:
-1. Call 911 or Poison Control immediately.
-2. Identify what was ingested, how much, and when — report to emergency services.
-3. Follow specific instructions from Poison Control if person is conscious.
-4. If unconscious and breathing, place in recovery position.
-5. For skin or eye contact, flush with large amounts of clean water for at least 20 minutes.
-
-NEVER DO:
-- Do NOT induce vomiting unless Poison Control specifically instructs you to.
-- Do NOT give food, milk, or water to neutralize the poison without professional guidance.
+- Call 911 or Poison Control immediately.
+- Identify what was ingested, how much, and when — report to emergency services.
+- Follow specific instructions from Poison Control if person is conscious.
+- If unconscious and breathing, place in recovery position.
+- For skin or eye contact, flush with large amounts of clean water for at least 20 minutes.
+- Do not induce vomiting unless Poison Control specifically instructs you to.
+- Do not give food, milk, or water to neutralize the poison without professional guidance.

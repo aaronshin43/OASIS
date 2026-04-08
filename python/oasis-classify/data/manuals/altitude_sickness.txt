@@ -1,9 +1,12 @@
 Category: Altitude Sickness
 
-- Stop ascending and rest if symptoms are mild: headache, nausea, fatigue.
-- Descend immediately if confusion, loss of coordination, or breathlessness at rest.
-- Descend at least 500-1000 meters — most effective treatment.
-- Give supplemental oxygen if available at 2-4 liters per minute.
-- Dexamethasone 8 mg for severe AMS or HACE; Nifedipine 30 mg for HAPE.
-- Do not continue ascending while experiencing any altitude sickness symptoms.
-- Do not take sleeping pills — they suppress breathing and worsen hypoxia.
+STEPS:
+1. Stop ascending and rest if symptoms are mild: headache, nausea, fatigue.
+2. Descend immediately if confusion, loss of coordination, or breathlessness at rest.
+3. Descend at least 500-1000 meters — most effective treatment.
+4. Give supplemental oxygen if available at 2-4 liters per minute.
+5. Dexamethasone 8 mg for severe AMS or HACE; Nifedipine 30 mg for HAPE.
+
+NEVER DO:
+- Do NOT continue ascending while experiencing any altitude sickness symptoms.
+- Do NOT take sleeping pills — they suppress breathing and worsen hypoxia.

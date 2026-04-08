@@ -1,9 +1,12 @@
 Category: Frostbite
 
-- Move person to a warm environment immediately.
-- Remove wet gloves, socks, or footwear from affected areas gently.
-- Do not rewarm if refreezing is possible — refreezing causes worse damage.
-- Rewarm by immersing in warm water 37-40 degrees C for 20-30 minutes.
-- Cover rewarmed area with dry dressings; pad between frostbitten fingers or toes.
-- Do not rub or massage frostbitten tissue — ice crystals cause further damage.
-- Do not use fire, stove, or heating pad — uneven heat burns numb tissue.
+STEPS:
+1. Move person to a warm environment immediately.
+2. Remove wet gloves, socks, or footwear from affected areas gently.
+3. Do not rewarm if refreezing is possible — refreezing causes worse damage.
+4. Rewarm by immersing in warm water 37-40 degrees C for 20-30 minutes.
+5. Cover rewarmed area with dry dressings; pad between frostbitten fingers or toes.
+
+NEVER DO:
+- Do NOT rub or massage frostbitten tissue — ice crystals cause further damage.
+- Do NOT use fire, stove, or heating pad — uneven heat burns numb tissue.

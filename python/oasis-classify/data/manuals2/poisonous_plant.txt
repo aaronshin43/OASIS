@@ -1,12 +1,9 @@
 Category: Poisonous Plant Exposure
 
-STEPS:
-1. Skin contact (ivy, oak, sumac): wash with soap and water immediately — within 10 minutes greatly reduces reaction.
-2. Remove contaminated clothing without touching its outer surface.
-3. Apply cool compresses; use calamine lotion or hydrocortisone cream for itching.
-4. For plant or berry ingestion: call 911 and identify the plant if possible.
-5. Eye exposure: flush with clean water for 15-20 minutes without rubbing.
-
-NEVER DO:
-- Do NOT induce vomiting after plant ingestion without professional guidance.
-- Do NOT burn poison ivy — inhaling the smoke causes severe airway injury.
+- Skin contact (ivy, oak, sumac): wash with soap and water immediately — within 10 minutes greatly reduces reaction.
+- Remove contaminated clothing without touching its outer surface.
+- Apply cool compresses; use calamine lotion or hydrocortisone cream for itching.
+- For plant or berry ingestion: call 911 and identify the plant if possible.
+- Eye exposure: flush with clean water for 15-20 minutes without rubbing.
+- Do not induce vomiting after plant ingestion without professional guidance.
+- Do not burn poison ivy — inhaling the smoke causes severe airway injury.
