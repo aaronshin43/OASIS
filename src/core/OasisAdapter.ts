@@ -13,7 +13,7 @@ import {
 } from "../cloud-api/local/oasis-classify-client";
 import { oasisLogDir } from "../utils/dir";
 
-// ── Safe fallbacks ───────────────────────────────────────────────────────────
+// Safe fallbacks
 
 const SAFE_FALLBACK_TEXT =
     "I am a first-aid assistant. I could not process your request right now. " +
@@ -22,23 +22,23 @@ const SAFE_FALLBACK_TEXT =
 const SAFE_FALLBACK_PROMPT = `You are OASIS, an offline first-aid assistant.
 Tell the user clearly and calmly:
 1. Call emergency services immediately (local emergency number).
-2. Stay on the line with the dispatcher — they will guide you.
+2. Stay on the line with the dispatcher; they will guide you.
 3. Do not leave the person alone.`;
 
-// ── Streaming chunk sanitizer ────────────────────────────────────────────────
+// Streaming chunk sanitizer
 
 /**
  * Strip markdown formatting characters from LLM streaming token chunks.
- * Applied to every partial token before it reaches TTS so asterisks, hashes,
- * and backticks are never spoken aloud by the TTS engine.
+ * Normalize unicode punctuation before it reaches TTS so speech stays stable.
  */
 export const sanitizeOasisChunk = (chunk: string): string =>
     chunk
-        .replace(/\*+/g, "")       // **bold** / *italic* markers
-        .replace(/`+/g, "")        // `code` backticks
-        .replace(/^#+\s*/gm, "");  // ### headings (safe in chunks — only matches at line start)
+        .replace(/\*+/g, "")
+        .replace(/`+/g, "")
+        .replace(/[—–]/g, "; ")
+        .replace(/^#+\s*/gm, "");
 
-// ── Response logger ───────────────────────────────────────────────────────────
+// Response logger
 
 /**
  * Write a structured JSONL entry to data/oasis_logs/ for every completed OASIS response.
@@ -60,7 +60,7 @@ export const logOasisResponse = (query: string, response: string): void => {
     }
 };
 
-// ── Classify dispatch ─────────────────────────────────────────────────────────
+// Classify dispatch
 
 /**
  * Discriminated union representing all four dispatch modes from oasis-classify.
@@ -75,12 +75,12 @@ export type OasisDispatch =
 /**
  * Call the classify service and return a strongly-typed OasisDispatch.
  *
- * Always resolves — on failure the classify client already returns a safe
+ * Always resolves; on failure the classify client already returns a safe
  * ood_response fallback, so this function never needs its own try/catch.
  *
  * @param query           The user's raw utterance from ASR.
  * @param prevTriageHint  Active triage category from previous turn, or null.
- * @returns               OasisDispatch — one of four mode variants.
+ * @returns               OasisDispatch; one of four mode variants.
  */
 export async function dispatchQuery(
     query: string,
@@ -88,7 +88,7 @@ export async function dispatchQuery(
 ): Promise<OasisDispatch> {
     const raw = await dispatch(query, prevTriageHint);
 
-    // Telemetry log — one line per call
+    // Telemetry log; one line per call
     console.log(
         `[Classify] mode=${raw.mode} category=${raw.category ?? "null"} ` +
         `score=${raw.score?.toFixed(2) ?? "null"} path=${raw.threshold_path} ` +
