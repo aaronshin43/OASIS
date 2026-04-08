@@ -37,18 +37,5 @@ ensureDirExists(recordingsDir);
 export const chatHistoryDir = path.join(dataDir, "chat_history");
 ensureDirExists(chatHistoryDir);
 
-export const imageDir = path.join(dataDir, "images");
-ensureDirExists(imageDir);
-
-export const cameraDir = path.join(dataDir, "camera");
-ensureDirExists(cameraDir);
-
-
-export const knowledgeDir = path.join(__dirname, "../..", "knowledge");
-ensureDirExists(knowledgeDir);
-
 export const oasisLogDir = path.join(dataDir, "oasis_logs");
 ensureDirExists(oasisLogDir);
-
-export const testResultsDir = path.join(dataDir, "test_results");
-ensureDirExists(testResultsDir);

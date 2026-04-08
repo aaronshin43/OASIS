@@ -4,7 +4,7 @@ import {
   getRecordFileDurationMs,
   splitSentences,
 } from "./../utils/index";
-import { compact, noop } from "lodash";
+import { noop } from "lodash";
 import {
   onButtonPressed,
   onButtonReleased,
@@ -19,11 +19,7 @@ import {
 import { StreamResponser } from "./StreamResponsor";
 import { recordingsDir } from "../utils/dir";
 import dotEnv from "dotenv";
-import { getSystemPromptWithKnowledge } from "./Knowledge";
-import { getSystemPromptFromOasis, sanitizeOasisChunk, logOasisResponse, dispatchQuery } from "./OasisAdapter";
-import { enableRAG } from "../cloud-api/knowledge";
-
-const useOasis = process.env.ENABLE_OASIS_MATCHER === "true" || true;
+import { sanitizeOasisChunk, logOasisResponse, dispatchQuery } from "./OasisAdapter";
 
 const TRIAGE_HINT_TTL_MS = 60_000;
 
@@ -38,7 +34,6 @@ class ChatFlow {
   partialThinking: string = "";
   thinkingSentences: string[] = [];
   answerId: number = 0;
-  knowledgePrompts: string[] = [];
   private triageHint: { category: string; expiresAt: number } | null = null;
 
   constructor() {
@@ -155,8 +150,8 @@ class ChatFlow {
         this.partialThinking = "";
         this.thinkingSentences = [];
 
-        if (useOasis) {
-          const capturedQuery = this.asrText;
+        const capturedQuery = this.asrText;
+        {
 
           dispatchQuery(capturedQuery, this.getActiveTriageHint())
             .then((dispatch) => {
@@ -234,60 +229,6 @@ class ChatFlow {
                   () => {},
                 );
               }
-            });
-
-        } else {
-          let systemPromptPromise = Promise.resolve("");
-          if (enableRAG) {
-            systemPromptPromise = getSystemPromptWithKnowledge(this.asrText);
-          }
-
-          systemPromptPromise
-            .then((res: string) => {
-              let knowledgePrompt = res;
-              if (res) {
-                console.log("Retrieved knowledge for RAG:\n", res);
-              }
-              if (this.knowledgePrompts.includes(res)) {
-                console.log(
-                  "[RAG] Knowledge prompt already used in this session, skipping to avoid repetition.",
-                );
-                knowledgePrompt = "";
-              }
-              if (knowledgePrompt) {
-                this.knowledgePrompts.push(knowledgePrompt);
-              }
-              const prompt: {
-                role: "system" | "user";
-                content: string;
-              }[] = compact([
-                knowledgePrompt
-                  ? {
-                      role: "system" as const,
-                      content: knowledgePrompt,
-                    }
-                  : null,
-                {
-                  role: "user" as const,
-                  content: this.asrText,
-                },
-              ]);
-
-              chatWithLLMStream(
-                prompt,
-                (text) => {
-                  if (currentAnswerId !== this.answerId) return;
-                  partial(text);
-                },
-                () => {
-                  if (currentAnswerId !== this.answerId) return;
-                  endPartial();
-                },
-                (partialThinking) =>
-                  currentAnswerId === this.answerId &&
-                  this.partialThinkingCallback(partialThinking),
-                () => {},
-              );
             });
         }
         getPlayEndPromise().then(() => {
