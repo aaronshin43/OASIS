@@ -1,7 +1,7 @@
 # TODO
 
 - [ ] 데모용 스크립트 선별
-- [ ] 큰 모델 실험 gemma4:e2b
+- [ ] 자꾸 꺼지는 문제 해결
 
 - meeting
 - [ ] 메트로늄 for cpr -> ilcore?
