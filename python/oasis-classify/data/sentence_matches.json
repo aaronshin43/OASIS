@@ -27,6 +27,14 @@
   "how do i turn on the aed and use it": "cpr",
   "where do i stick the aed pads on the body": "cpr",
 
+  "i cut my finger and it wont stop bleeding": "bleeding",
+  "my finger is cut and bleeding": "bleeding",
+  "i have a deep cut on my finger": "bleeding",
+  "i cut my hand and there is a lot of blood": "bleeding",
+  "my finger is bleeding badly": "bleeding",
+  "i have a cut that wont stop bleeding": "bleeding",
+  "there is a cut on my arm and its bleeding": "bleeding",
+
   "how do i stop the bleeding": "bleeding",
   "there is so much blood i dont know what to do": "bleeding",
   "the wound wont stop bleeding": "bleeding",

@@ -1,278 +1,209 @@
 # O.A.S.I.S. Architecture
 
-Detailed architecture reference for the RAG pipeline, Context Injection system, Flask API, and knowledge base structure.
+Detailed architecture reference for the classify pipeline, dispatch modes, Flask API, manual format, and TypeScript bridge.
 
 ---
 
-## 1. RAG 3-Stage Pipeline
+## 1. Classify Dispatch Pipeline
 
-`retriever.py` implements the core algorithm, based on the Pocket RAG paper, optimized for Pi5's constrained resources.
+`service.py` orchestrates the full dispatch on every query. Two fast-path tiers run before the embedding model is touched.
 
 ```
-Query
+User Query (raw ASR text)
+  │
+  ▼  normalize()  — lowercase, strip punctuation, collapse whitespace
   │
   ▼
-┌──────────────────────────────────────────────┐
-│  Stage 1: Medical Keyword Lexical Filter      │
-│  medical_keywords.py inverted-index lookup    │
-│  → up to 50 candidate chunks                 │
-└──────────────────┬───────────────────────────┘
-                   │
-                   ▼
-┌──────────────────────────────────────────────┐
-│  Stage 2: Hybrid Semantic Re-ranking          │
-│  hybrid_score = 0.6×cosine + 0.4×lexical     │
-│  gte-small (384-dim) vector similarity        │
-│  → top-4 chunks above SCORE_THRESHOLD (0.10) │
-└──────────────────┬───────────────────────────┘
-                   │
-                   ▼
-┌──────────────────────────────────────────────┐
-│  Confidence Gate (app.py)                     │
-│  best_score = chunks[0].hybrid_score          │
-│  if best_score < CONFIDENCE_THRESHOLD (0.35) │
-│  → LOW_CONFIDENCE_PROMPT delivered to LLM    │
-└──────────────────┬───────────────────────────┘
-                   │
-                   ▼
-┌──────────────────────────────────────────────┐
-│  Stage 3: Context Compression                 │
-│  compressor.py — query-relevant sentences     │
-│  Safety sentences always preserved           │
-│  → 20–40% token reduction                   │
-└──────────────────┬───────────────────────────┘
-                   │
-                   ▼
-            RetrievalResult
-          (.chunks, .context, .latency_ms)
+┌──────────────────────────────────────────────────┐
+│  Tier 0A: Short Query Dict Lookup                 │
+│  word count ≤ 3 → short_queries.json             │
+│  edit-distance-1 tolerance for ASR noise          │
+│  → direct_response text OR category_id           │
+└───────────────────┬──────────────────────────────┘
+        no match    │ match → build prompt / return response
+                    ▼
+┌──────────────────────────────────────────────────┐
+│  Tier 0B: Sentence Match Dict Lookup              │
+│  word count > 3 → sentence_matches.json          │
+│  → direct_response text OR category_id           │
+└───────────────────┬──────────────────────────────┘
+        no match    │ match → build prompt / return response
+                    ▼
+┌──────────────────────────────────────────────────┐
+│  Tier 1: Centroid Classifier                      │
+│  gte-small (384-dim) embed → cosine to centroids  │
+│  33 centroids: 32 medical + out_of_domain         │
+│  Apply prev_triage_hint boost if active           │
+└───────────────────┬──────────────────────────────┘
+                    │
+         ┌──────────┴──────────────┐
+         ▼                         ▼
+  score < OOD_FLOOR (0.30)   out_of_domain cluster best
+  → ood_response              → ood_response
+         │
+         ▼
+  0.30 ≤ score < 0.65
+  → triage_prompt  (LLM asks clarifying question)
+         │
+         ▼
+  score ≥ 0.65
+  → manual lookup → build_prompt() → llm_prompt
 ```
 
-### Stage detail
+**Prompt size target:** ~200–350 tokens total (vs ~500–800 in a typical RAG approach).
 
-**Stage 1 — Lexical Pre-filtering**
-- `medical_keywords.py` taxonomy → inverted index built at index time
-- Query keywords detected → `keyword_map` lookup for candidate chunk IDs
-- If no keywords match, falls back to full FAISS search over all chunks
-- Purpose: eliminate expensive vector similarity calculations for irrelevant chunks
+---
 
-**Stage 2 — Hybrid Re-ranking**
+## 2. Four Dispatch Modes
+
+Every `/dispatch` response has one of four `mode` values. The TypeScript layer acts on this field directly.
+
+| Mode | Trigger | TypeScript behavior |
+|------|---------|---------------------|
+| `direct_response` | Tier 0 returned a canned response text | Speak `response_text` via TTS. No LLM call. Clear triage hint. |
+| `llm_prompt` | Classifier hit (score ≥ 0.65) or Tier 0 category match | Send `system_prompt` → LLM → TTS. Clear triage hint. |
+| `triage_prompt` | Score in [0.30, 0.65) — ambiguous query | Send `system_prompt` → LLM → TTS. Store `category` as triage hint with 60s TTL. |
+| `ood_response` | score < 0.30, OOD cluster, empty query, or network failure | Speak `response_text` via TTS. No LLM call. Clear triage hint. |
+
+---
+
+## 3. Triage Hint System
+
+Allows multi-turn context without session state on the Python side. The service is stateless.
+
+```
+Turn 1: "I cut myself"
+  → score = 0.45 (triage band)
+  → mode = triage_prompt, category = "bleeding"
+  → TypeScript stores { category: "bleeding", expiresAt: now + 60s }
+
+Turn 2: "there's a lot of blood" (sent with prev_triage_hint="bleeding")
+  → Python applies TRIAGE_HINT_BOOST (+0.05) to "bleeding" centroid score
+  → score may cross CLASSIFY_THRESHOLD → mode = llm_prompt
+  → TypeScript clears triage hint
+```
+
+**Rules:**
+- TTL is **60 seconds** — managed entirely by TypeScript (`ChatFlow.ts`)
+- Python checks `TRIAGE_HINT_MIN_RELEVANCE (0.20)` — if the new query has cosine similarity < 0.20 to the hint category, the boost is skipped (topic shift detection)
+- `hint_changed_result: true` in the response means the hint actually changed the dispatch outcome
+- Do not inspect query text in TypeScript to decide whether to send the hint — pass it blindly; Python handles topic shift
+
+---
+
+## 4. Multi-Label Dispatch
+
+When a second category scores ≥ `primary_score × MULTI_LABEL_RATIO (0.80)`, both are included in the prompt.
+
+```
+prompt_builder.py
+  ├── primary manual (full STEPS + NEVER DO)
+  └── secondary: one-liner from also_check_summaries.json
+      prefixed with "ALSO CHECK: [Category] — [one-liner]"
+
+Hard ceiling: MAX_PROMPT_TOKENS = 400 (tiktoken cl100k_base)
+Max categories: 2 (MAX_CATEGORIES)
+```
+
+Priority ordering for multi-label sort:
 ```python
-hybrid_score = 0.6 * cosine_similarity + 0.4 * lexical_overlap
+PRIORITY_CRITICAL = ["cpr", "choking", "bleeding"]
+PRIORITY_URGENT   = ["anaphylaxis", "electric_shock", "poisoning", "drowning"]
+# All others: ordered by classifier score
 ```
-- `cosine`: gte-small embedding similarity (384-dim L2-normalized → `IndexFlatIP`)
-- `lexical`: query-chunk keyword overlap ratio (query-specific, not global density)
-- Body-part mismatch penalty applied to reduce cross-anatomy false positives
-- `SCORE_THRESHOLD = 0.10` — structural noise floor; chunks below this are discarded
-- `CONFIDENCE_THRESHOLD = 0.35` — applied in `app.py` after retrieval; if the best chunk's score falls below this, `LOW_CONFIDENCE_PROMPT` is used instead of the normal template (see Section 6)
-- Top-4 selected
-
-**Stage 3 — Context Compression**
-- Sentence-level scoring: keyword hits × 1.0 + position bonus (0.05/position)
-- "Do NOT", "Never", "Avoid" + query keywords always preserved
-- Minimum 2 sentences or 40% token preservation guaranteed
-- Output: `[Section Header]\ncompressed sentences`
 
 ---
 
-## 2. Context Injection
+## 5. Manual Format
 
-Even with correct RAG retrieval, compact models (0.8b–1b) sometimes ignore context. Context Injection prepends protocol directives before the RAG context so the LLM reads them first.
+Every file in `data/manuals/` must follow this exact format:
 
-### How it works
+```
+Category: [Human-readable name]
 
-```python
-# context_injector.py (single source of truth)
-q_lower = query.lower()
+STEPS:
+1. [First and most critical action].
+2. [Second action].
+...
 
-if any(sig in q_lower for sig in _CARDIAC_ARREST_SIGNALS):
-    context = "CARDIAC ARREST PROTOCOL — ACT NOW:\n1. CALL..." + context
-
-if any(sig in q_lower for sig in _BURN_SIGNALS):
-    context = "⚠ BURN — MOST IMPORTANT FIRST ACTION:\n..." + context
+NEVER DO:
+- Do NOT [common myth or dangerous mistake].
+- Do NOT [another dangerous action].
 ```
 
-Injections are **prepended** — the LLM reads the directive before the retrieved context.
+- Plain text only — no markdown. The 1b LLM copies markdown formatting if it sees it.
+- 80–140 tokens per manual.
+- STEPS and NEVER DO sections are both required.
+- Content distilled from source documents — never invented.
 
-### 22 injection signals
-
-| Signal variable | Detected situation | Injected content |
-|---|---|---|
-| `_CARDIAC_ARREST_SIGNALS` | No pulse, not breathing | CPR 30:2 protocol |
-| `_SPINAL_SIGNALS` | Suspected spinal injury | Do not move |
-| `_BURN_SIGNALS` | Burns | Cool 20 min immediately |
-| `_CHOKING_SIGNALS` | Airway obstruction | Back blows + Heimlich |
-| `_SNAKEBITE_SIGNALS` | Snake bite | Immobilize, do not suck |
-| `_HYPOTHERMIA_SIGNALS` | Hypothermia | Warm core, handle gently |
-| `_HEAT_STROKE_SIGNALS` | Heat stroke | Cool immediately |
-| `_LIGHTNING_SIGNALS` | Lightning | Crouch low, avoid trees |
-| `_FROSTBITE_SIGNALS` | Frostbite | Warm water rewarming |
-| `_PANIC_BLOOD_SIGNALS` | Mass bleeding panic | Direct pressure |
-| `_NO_EPIPEN_SIGNALS` | No EpiPen available | Call emergency first |
-| `_SEIZURE_SIGNALS` | Seizure/convulsion | Do not restrain, side position |
-| `_STROKE_SIGNALS` | Stroke | FAST assessment, no aspirin |
-| `_DROWNING_SIGNALS` | Submersion | Rescue breathing first |
-| `_POISONING_SIGNALS` | Poisoning | Do not induce vomiting |
-| `_ELECTRIC_SHOCK_SIGNALS` | Electric shock | Do not touch victim |
-| `_INFANT_CPR_SIGNALS` | Infant cardiac arrest | 2-finger compressions |
-| `_EYE_CHEMICAL_SIGNALS` | Chemical eye injury | Running water irrigation |
-| `_SHOCK_SIGNALS` | Shock | Elevate legs, call emergency |
-| `_FRACTURE_SIGNALS` | Fracture | Immobilize as found, no realignment |
-| `_ASTHMA_SIGNALS` | Asthma attack | Sit upright, do not lie down |
-| `_HEART_ATTACK_SIGNALS` | Heart attack | Aspirin if conscious, call 911 |
-
-### Design principles
-
-1. **Prepend:** directives appear before RAG context → LLM reads them first
-2. **Priority:** when signals overlap, more dangerous takes precedence (e.g., chemical eye > burn)
-3. **No numbered format:** numbered injections cause LLM to echo those numbers in output → use unnumbered paragraphs
-4. **Single source:** `context_injector.py` only — never add signal logic elsewhere
+**Rebuild required after editing manuals:** None — `manual_store.py` reloads from disk on service restart.
 
 ---
 
-## 3. Index Build Process
+## 6. Flask API Reference
 
-```bash
-bash index_knowledge.sh
-# or directly:
-cd python/oasis-rag && python indexer.py
-```
-
-```
-data/knowledge/*.md
-       │
-       ▼  SectionAwareChunker (document_chunker.py)
-  H3-boundary splits, min-size merge within H2
-       │
-       ▼  sentence-transformers/gte-small
-  text_with_prefix → 384-dim embedding
-       │
-       ├──▶ data/rag_index/chunks.faiss      (FAISS IndexFlatIP)
-       ├──▶ data/rag_index/metadata.json     (chunk text, source, section)
-       └──▶ data/rag_index/keyword_map.json  (keyword → chunk ID inverted index)
-```
-
-**Rebuild required when:**
-- Adding or editing `data/knowledge/*.md` files
-- Changing chunking logic in `document_chunker.py`
-- Adding keywords to `medical_keywords.py`
-
-**No rebuild needed for:**
-- Changing `ALPHA`, `SCORE_THRESHOLD`, `CONFIDENCE_THRESHOLD`, `TOP_K` in `config.py`
-- Changing context injection signals in `context_injector.py`
-
----
-
-## 4. Knowledge Base Document Format
-
-All documents under `data/knowledge/` must follow this header format for Stage 1 lexical matching to work correctly:
-
-```markdown
-# WHO BEC — CPR Protocol
-
-**Source:** WHO Basic Emergency Care 2018
-**Standard:** WHO / ICRC 2018
-**Category:** Clinical Skills — Cardiopulmonary Resuscitation
-
-[DOMAIN_TAGS: CPR, cardiac_arrest, chest_compressions, 30_2, AED, ...]
-
-## Section Title
-
-### Subsection (chunk boundary)
-
-Content...
-```
-
-- `[DOMAIN_TAGS: ...]` — used for BM25 lexical scoring and keyword map construction
-- `###` headers mark chunk boundaries (SectionAwareChunker splits here)
-- Without correct DOMAIN_TAGS, Stage 1 will miss the document on keyword queries
-
----
-
-## 5. Flask API Reference
-
-Base URL: `http://localhost:5001`
+Base URL: `http://localhost:5002`
 
 ### GET /health
 
 ```bash
-curl http://localhost:5001/health
+curl http://localhost:5002/health
 ```
 
 Response:
 ```json
-{
-  "status": "ok",
-  "index_ready": true,
-  "chunk_count": 374,
-  "model": "thenlper/gte-small"
-}
+{ "status": "ok", "service": "oasis-classify", "port": 5002 }
 ```
 
-### POST /retrieve
+### POST /dispatch
 
 ```bash
-curl -X POST http://localhost:5001/retrieve \
+curl -X POST http://localhost:5002/dispatch \
   -H "Content-Type: application/json" \
-  -d '{"query": "patient bleeding from leg wont stop"}'
+  -d '{"query": "my friend is bleeding from the leg"}'
 ```
 
 Request body:
 ```json
 {
-  "query": "patient bleeding from leg wont stop",
-  "top_k": 4,       // optional (default 4)
-  "compress": true  // optional (default true)
+  "query": "my friend is bleeding from the leg",
+  "prev_triage_hint": "bleeding"    // optional — category from previous triage turn
 }
 ```
 
 Response:
 ```json
 {
-  "context": "[Source 1: who_bec_skills_bleeding.md]\n...",
-  "system_prompt": "You are OASIS...\n\nREFERENCE:\n...\n\nTASK: ...",
-  "low_confidence": false,
-  "best_score": 0.72,
-  "chunks": [
-    {
-      "source": "who_bec_skills_bleeding.md",
-      "section": "Tourniquet Application",
-      "hybrid_score": 0.72,
-      "cosine_score": 0.81,
-      "lexical_score": 0.55,
-      "compressed_text": "..."
-    }
-  ],
-  "stage1_candidates": 12,
-  "stage2_passing": 4,
-  "latency_ms": 25.4
+  "mode":               "llm_prompt",
+  "response_text":      null,
+  "system_prompt":      "You are OASIS...\n\nSTEPS:\n1. Apply direct pressure...",
+  "category":           null,
+  "top3":               [{"category": "bleeding", "score": 0.81}, ...],
+  "score":              0.81,
+  "threshold_path":     "classifier_hit",
+  "latency_ms":         42.3,
+  "hint_changed_result": false
 }
 ```
 
-`low_confidence` is `true` when chunks were returned but the best hybrid score is below `CONFIDENCE_THRESHOLD` (0.35). In this case `system_prompt` contains `LOW_CONFIDENCE_PROMPT` instead of the full context-based template. The TypeScript client uses `system_prompt` directly and is unaffected by this distinction.
+**`threshold_path` values (server-side):**
 
-### POST /index
+| Value | Meaning |
+|-------|---------|
+| `tier0_short` | Matched in `short_queries.json` (word count ≤ 3) |
+| `tier0_sentence` | Matched in `sentence_matches.json` (word count > 3) |
+| `classifier_hit` | Tier 1 score ≥ CLASSIFY_THRESHOLD |
+| `triage` | Tier 1 score in triage band |
+| `ood_floor` | Tier 1 score < OOD_FLOOR |
+| `ood_cluster` | `out_of_domain` centroid was top hit |
 
-Rebuild the knowledge index from `data/knowledge/`. Run after adding or editing documents.
+**`threshold_path` values (client-synthesized, TypeScript only):**
 
-```bash
-curl -X POST http://localhost:5001/index
-```
-
----
-
-## 6. LLM System Prompt
-
-`prompt.py` is the single source of truth for all prompt templates. `app.py` selects which template to use based on retrieval confidence.
-
-### Three-state prompt matrix
-
-| Condition | Template used |
-|---|---|
-| Chunks exist AND `best_score ≥ 0.35` | `SYSTEM_PROMPT_TEMPLATE` — full RAG context delivered |
-| Chunks exist BUT `best_score < 0.35` | `LOW_CONFIDENCE_PROMPT` — "no specific info found" |
-| Zero chunks (all below `SCORE_THRESHOLD`) | `SAFE_FALLBACK_PROMPT` — "knowledge base unavailable" |
-
-The distinction matters: `LOW_CONFIDENCE_PROMPT` indicates a **query-match failure** (the KB exists but has no relevant answer), while `SAFE_FALLBACK_PROMPT` indicates an **infrastructure failure** (the KB itself is empty or unreachable).
+| Value | Meaning |
+|-------|---------|
+| `network_error` | Service unreachable or timeout |
+| `service_error` | Non-2xx HTTP response |
+| `invalid_schema` | Response did not match expected schema |
 
 ---
 
@@ -280,13 +211,44 @@ The distinction matters: `LOW_CONFIDENCE_PROMPT` indicates a **query-match failu
 
 ```
 ChatFlow.ts
-  └── OasisAdapter.getSystemPromptFromOasis(query)
-        ├── [1] ragRetrieve()          oasis-rag-client.ts → POST :5001/retrieve (5s timeout)
-        ├── [2] matchProtocolLocal()   oasis-matcher-node.ts (embedded, no server needed)
-        └── [3] ""                     empty → LLM falls back to "call emergency services"
+  └── OasisAdapter.dispatchQuery(query, triageHint)
+        └── oasis-classify-client.dispatch()   POST :5002/dispatch (15s timeout)
+              │
+              ├── mode = direct_response  → partial(responseText) → endPartial()
+              ├── mode = ood_response     → partial(responseText) → endPartial()
+              ├── mode = llm_prompt       → chatWithLLMStream(systemPrompt, query)
+              └── mode = triage_prompt    → chatWithLLMStream(systemPrompt, query)
+                                            + store triageHint in ChatFlow
 ```
 
-`oasis-rag-client.ts` exports:
-- `isRagReady()` — health check
-- `ragRetrieve(query)` — returns context string (empty string on error, never throws)
-- `ragRetrieveFull(query)` — returns full response including chunk metadata
+`oasis-classify-client.ts` exports:
+- `dispatch(query, prevTriageHint)` — always resolves; returns safe `ood_response` fallback on any failure
+- `classifyHealth()` — health check, returns null on failure
+- `isClassifyReady()` — boolean convenience wrapper
+
+On network failure the client returns:
+```json
+{
+  "mode": "ood_response",
+  "response_text": "I am a first-aid assistant. If this is an emergency, call emergency services.",
+  "threshold_path": "network_error"
+}
+```
+
+---
+
+## 8. Build Artifacts
+
+| Artifact | Location | Regenerate with |
+|----------|----------|----------------|
+| Centroid array | `python/oasis-classify/data/centroids.npy` | `cd python/oasis-classify && python build_centroids.py` |
+
+**Rebuild required after:**
+- Editing `data/prototypes.json`
+- Adding/removing categories in `categories.py`
+- Changing `EMBEDDING_MODEL` in `config.py`
+
+**No rebuild needed for:**
+- Editing `data/manuals/*.txt`
+- Changing thresholds (`CLASSIFY_THRESHOLD`, `OOD_FLOOR`, etc.) in `config.py`
+- Editing `data/short_queries.json` or `data/sentence_matches.json`

@@ -1,6 +1,6 @@
-# Python Module Reference — `python/oasis-rag/`
+# Python Module Reference — `python/oasis-classify/`
 
-Quick reference for every Python file in the RAG service. Load only the files relevant to your task.
+Quick reference for every Python file in the classify service. Load only the files relevant to your task.
 
 ---
 
@@ -8,76 +8,76 @@ Quick reference for every Python file in the RAG service. Load only the files re
 
 | File | Role | Read when... |
 |------|------|-------------|
-| `app.py` | Flask HTTP service (port 5001). Exposes `GET /health`, `POST /retrieve`, `POST /index`. Entry point when running `python app.py`. | Modifying API endpoints, request/response schema, or service startup logic |
-| `retriever.py` | **3-Stage Hybrid Retriever** — orchestrates Stage 1 → Stage 2 → Stage 3. Main class: `Retriever`. Returns `RetrievalResult` with `context`, `chunks`, `latency_ms`. | Changing retrieval logic, score thresholds, source diversity, or adding a new retrieval stage |
-| `indexer.py` | **Document Indexing Pipeline** — chunks → embeds (gte-small) → FAISS IndexFlatIP → keyword inverted index. Writes artifacts to `data/rag_index/`. Also contains `IndexStore` and `load_index()` used by `app.py`. | Changing the embedding model, index format, or artifact layout |
-| `config.py` | **Central configuration** — all hyperparameters in one place. Paths, ALPHA, TOP_K, SCORE_THRESHOLD, CONFIDENCE_THRESHOLD, compression settings, Flask host/port. Override via env vars (`OASIS_*`). | Tuning any pipeline parameter; checking what a constant value is |
-| `context_injector.py` | **22-signal context injection** (single source of truth). `inject_context(context, query)` prepends emergency protocol blocks when signals are detected in the query. | Adding/editing emergency signals or protocol texts |
-| `prompt.py` | **LLM system prompt templates** — `SYSTEM_PROMPT_TEMPLATE`, `SAFE_FALLBACK_PROMPT`, `LOW_CONFIDENCE_PROMPT`. `build_system_prompt()` selects the right template based on context availability and confidence. | Editing the LLM instruction format, fallback behavior, or markdown stripping logic |
+| `service.py` | Flask HTTP service (port 5002). Exposes `GET /health`, `POST /dispatch`. Entry point when running `python service.py`. Calls `dispatch()` which is also importable for tests. | Modifying API endpoints, request/response schema, or service startup logic |
+| `classifier.py` | **Tier 1 — centroid classifier.** Loads `data/centroids.npy` at startup, embeds query with gte-small, returns `DispatchResult` with `mode`, `category`, `score`, `top3`, `threshold_path`, `latency_ms`. Applies `prev_triage_hint` boost and OOD detection. | Changing score thresholds, triage band, OOD logic, or embedding model |
+| `fast_match.py` | **Tier 0 — zero-latency fast path.** Tier 0A: word count ≤ 3 → `short_queries.json` dict lookup. Tier 0B: word count > 3 → `sentence_matches.json` dict lookup. ASR-robust normalization + edit-distance-1 tolerance for short tokens. | Editing fast-path entries, normalization rules, or adding new short-query mappings |
+| `prompt_builder.py` | Assembles compact LLM system prompt from manual text + user query. Handles multi-label: primary manual + short "also check" block from `also_check_summaries.json`. Enforces `MAX_PROMPT_TOKENS (400)` hard ceiling via `tiktoken`. | Changing prompt format, token budget, or multi-label assembly logic |
+| `manual_store.py` | Loads `data/manuals/*.txt` at startup into a `dict[str, str]`. Serves manual text by category ID. | Adding or renaming manuals, or changing the load path |
+| `triage.py` | Triage prompt template for ambiguous queries in the `[OOD_FLOOR, CLASSIFY_THRESHOLD)` score band. LLM asks a clarifying question; TypeScript stores the returned category as a hint for the next turn. | Editing the triage question format or clarification strategy |
+| `categories.py` | 32 category definitions + metadata (ID, description, KB source, priority level). Priority ordering (`PRIORITY_CRITICAL`, `PRIORITY_URGENT`) determines multi-label sort order. | Adding/removing categories or adjusting priority levels |
+| `config.py` | **Central configuration** — all thresholds and paths in one place. `CLASSIFY_THRESHOLD`, `OOD_FLOOR`, `TIER0_MAX_WORDS`, `MULTI_LABEL_RATIO`, `MAX_PROMPT_TOKENS`, `TRIAGE_HINT_BOOST`, `TRIAGE_HINT_MIN_RELEVANCE`. Override via env vars (`OASIS_*`). | Tuning any pipeline parameter; checking what a constant value is |
 
 ---
 
-## Stage-Level Modules
-
-| File | Stage | Role |
-|------|-------|------|
-| `document_chunker.py` | Pre-index | Loads Markdown/txt files from `data/knowledge/` and splits them into overlapping chunks. Two chunkers: `DocumentChunker` (sliding window) and `SectionAwareChunker` (H3-boundary split, used by `Indexer`). |
-| `medical_keywords.py` | Stage 1 | Curated medical keyword taxonomy (~200 terms, 14 categories). `detect_keywords(text)` scans for matches; `expand_query(query)` returns related category terms for query expansion. Used by `Indexer` to build the inverted index and by `Retriever` for Stage 1 filtering. |
-| `query_classifier.py` | Stage 2 | Classifies query into `emergency_type`, `body_parts`, `severity`, `confidence`. Used by `Retriever._stage2_semantic()` to apply body-part mismatch penalties (e.g. finger fracture query should not retrieve chest/rib chunks). |
-| `compressor.py` | Stage 3 | Selective context compression — scores each sentence by keyword hits + position, keeps sentences above threshold, preserves safety-critical sentences (`Do not / Never`). `compress_chunk(chunk_text, query, section)`. |
-
----
-
-## Tools (`tools/`)
+## Offline Build Script
 
 | File | Role |
 |------|------|
-| `tools/chat_test.py` | Interactive CLI — connects to `localhost:5001` (RAG) and `localhost:11434` (Ollama) for end-to-end manual testing. Run: `python tools/chat_test.py` |
-| `tools/test_retriever.py` | Retriever integration test — runs 5 realistic emergency queries, prints Stage 1/2/3 stats and context preview. Run: `python tools/test_retriever.py` |
-| `tools/_utils.py` | Shared utilities for tools scripts: `SEP`, `SEP2` separators, `_safe()` (ASCII-safe Windows output), `_token_count()`, `_stats()` (mean/p95/min/max). |
+| `build_centroids.py` | **Offline only — not part of the service.** Reads `data/prototypes.json`, embeds all prototype queries with gte-small, computes per-category centroids, saves `data/centroids.npy`. Re-run after editing `prototypes.json`, adding categories, or changing `EMBEDDING_MODEL`. |
+
+---
+
+## Data Files
+
+| File | Role |
+|------|------|
+| `data/prototypes.json` | `{ category_id: [prototype_query, ...] }` — 15–30 queries per category. Input to `build_centroids.py`. |
+| `data/centroids.npy` | **Build artifact.** `(33, 384)` float32 array — one 384-dim centroid per category (32 medical + `out_of_domain`). Never edit manually. |
+| `data/short_queries.json` | Tier 0A — `{ normalized_query: category_id_or_response_text }` for word count ≤ 3. |
+| `data/sentence_matches.json` | Tier 0B — `{ normalized_sentence: category_id_or_response_text }` for word count > 3. |
+| `data/also_check_summaries.json` | Per-category curated one-liners for multi-label "ALSO CHECK" block. Human-written; never generated at runtime. |
+| `data/manuals/*.txt` | 38 manual files, one per category. STEPS + NEVER DO format. 80–140 tokens each. Single source of medical protocol content. |
 
 ---
 
 ## Test Suite (`tests/`)
 
-> **Primary gate:** `python tests/run_all.py` — must stay **117/117 PASS**
-
-| File | Test IDs | Role |
-|------|----------|------|
-| `tests/run_all.py` | — | **Main validation runner**. Discovers and runs all suites below. No Flask required. |
-| `tests/_shared.py` | — | Shared helpers: `TestResult`, `get_context_text()`, `context_contains()`, `top_score()`, `top_source()`. Imported by every test file. |
-| `tests/test_retrieval.py` | BLD-, CPR-, CHK-, ANA-, SHK-, TRM-, BRN-, BRT-, AMS-, WLD- | 47-case retrieval precision suite — checks must_contain keywords **and** expected source document across 10 emergency categories. |
-| `tests/test_safety.py` | SAF- | Safety guardrails — dangerous content (specific drug names, harmful advice) must NOT appear in context. |
-| `tests/test_edge_cases.py` | EDG- | Edge cases — panic input (all-caps), typos, empty queries, very long queries. |
-| `tests/test_latency.py` | LAT-, LAT-S- | E2E latency (4 queries × 20 runs) + per-stage benchmarks (Stage 1/2/3). |
-| `tests/unit/test_context_injector.py` | CI- | Unit tests for `context_injector.py` — 22 signals + 3 special cases (25 total). No model required. |
-| `tests/unit/test_compressor.py` | COMP- | Unit tests for `compressor.py` — safety prefix, section anchor, min_sentences, token ratio (10 total). No model required. |
-| `tests/unit/test_medical_keywords.py` | MKW- | Unit tests for `medical_keywords.py` — detect, expand, get_category, frozenset (8 total). No model required. |
-
-## Validation Utilities (`validation/`)
+Run all tests: `cd python/oasis-classify && python -m pytest tests/`
 
 | File | Role |
 |------|------|
-| `validation/run_all.py` | Backward-compatibility stub — delegates to `tests/run_all.py`. `python validation/run_all.py` still works. |
-| `validation/test_llm_response.py` | RAG + LLM integration — requires Flask on :5001 and Ollama on :11434. Evaluates response format, content correctness, safety. |
-| `validation/compare_models.py` | LLM model comparison tool — runs N models × N iterations, produces side-by-side table with latency estimates. |
-| `validation/results/` | JSON result files from both `tests/run_all.py` and `test_llm_response.py`. |
+| `tests/test_fast_match.py` | Tier 0 — exact match, sentence match, word count guard, ASR normalization, edit-distance-1 tolerance. |
+| `tests/test_classifier.py` | Tier 1 — category accuracy, OOD detection, triage band coverage, `top3` field correctness. |
+| `tests/test_manuals.py` | Format validation — STEPS + NEVER DO both present, token count in 150–250 range. |
+| `tests/test_integration.py` | End-to-end: all four dispatch modes, multi-label token ceiling, telemetry fields populated. |
+| `tests/test_contract.py` | `/dispatch` response schema stability — ensures TypeScript contract never silently breaks. |
+| `tests/test_adversarial.py` | Mixed-topic inputs, ASR noise, long nonsense, foreign language, canary recall (life-critical categories recall ≥ 0.95). |
+
+---
+
+## Training Utilities (`training/`)
+
+Not part of the service. Used offline to improve classifier accuracy.
+
+| File | Role |
+|------|------|
+| `training/generate_data.py` | Generates synthetic prototype queries for new or underperforming categories. |
+| `training/train_classifier.py` | Trains/validates the centroid model on prototype data. |
+| `training/calibrate_thresholds.py` | Sweeps `CLASSIFY_THRESHOLD` / `OOD_FLOOR` values and reports precision/recall tradeoffs. |
+| `training/replay_harness.py` | Replays logged real queries against the classifier to measure production accuracy. |
 
 ---
 
 ## Dependency Map
 
 ```
-app.py
-  ├── retriever.py        ← Retriever, RetrievalResult
-  │     ├── indexer.py    ← IndexStore, load_index
-  │     ├── compressor.py ← compress_chunk  (Stage 3)
-  │     ├── medical_keywords.py ← detect_keywords, expand_query  (Stage 1)
-  │     └── query_classifier.py ← classify_query  (Stage 2)
-  ├── indexer.py          ← Indexer, load_index
-  │     ├── document_chunker.py ← SectionAwareChunker
-  │     └── medical_keywords.py ← detect_keywords
-  ├── context_injector.py ← inject_context
-  ├── prompt.py           ← build_system_prompt
-  └── config.py           ← all hyperparameters
+service.py
+  ├── fast_match.py        ← tier0_lookup, normalize, is_direct_response
+  ├── classifier.py        ← classify, warmup, DispatchResult
+  │     └── config.py      ← CLASSIFY_THRESHOLD, OOD_FLOOR, TRIAGE_HINT_BOOST, ...
+  ├── prompt_builder.py    ← build_prompt, resolve_categories
+  │     ├── manual_store.py ← ManualStore (loads data/manuals/)
+  │     ├── categories.py  ← PRIORITY_CRITICAL, PRIORITY_URGENT
+  │     └── config.py      ← MAX_PROMPT_TOKENS, MULTI_LABEL_RATIO
+  └── triage.py            ← build_triage_prompt
 ```

@@ -33,6 +33,11 @@
   "blood loss": "bleeding",
   "deep cut": "bleeding",
   "wound bleeding": "bleeding",
+  "finger cut": "bleeding",
+  "cut finger": "bleeding",
+  "hand cut": "bleeding",
+  "cut hand": "bleeding",
+  "my cut": "bleeding",
 
   "anaphylaxis": "anaphylaxis",
   "epipen": "anaphylaxis",

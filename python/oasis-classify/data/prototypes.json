@@ -117,7 +117,14 @@
     "slurred speech and confusion after waking up",
     "stroke time is brain call 911",
     "transient ischemic attack TIA",
-    "what to do during a stroke"
+    "what to do during a stroke",
+    "my left side of body is weak",
+    "my right side is not moving",
+    "one side of my body feels numb",
+    "left arm and leg won't move suddenly",
+    "half my body is paralyzed",
+    "sudden paralysis on one side",
+    "my whole left side feels different"
   ],
   "heart_attack": [
     "chest pain radiating to left arm",
@@ -645,7 +652,14 @@
     "shock signs pale sweaty rapid breathing",
     "hemorrhagic shock",
     "she fainted and now her pulse is very fast",
-    "treat underlying cause of shock"
+    "treat underlying cause of shock",
+    "person is pale cold and sweaty after injury",
+    "cold clammy skin and fast pulse after trauma",
+    "pale sweaty and confused after accident",
+    "he is pale and shaking after a bad injury",
+    "she looks grey and clammy after the fall",
+    "victim is cold sweaty and barely responsive after injury",
+    "pale cold and weak after major blood loss"
   ],
   "fainting": [
     "someone fainted",

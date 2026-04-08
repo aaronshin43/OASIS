@@ -7,6 +7,5 @@ STEPS:
 4. Compress at 100-120 per minute; give 30 compressions then 2 rescue breaths.
 5. Use AED as soon as available — turn on and follow all voice prompts.
 
-NEVER DO:
 - Do NOT stop compressions repeatedly to check for a pulse.
 - Do NOT compress too slowly or shallowly — depth and rate are critical for blood flow.

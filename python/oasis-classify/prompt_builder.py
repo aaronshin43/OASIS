@@ -1,9 +1,9 @@
 """
-prompt_builder.py — Assembles compact LLM prompts from pre-written manuals.
+prompt_builder.py - Assembles compact LLM prompts from pre-written manuals.
 
 Handles multi-label: primary manual + short "also check" block pulled from
 data/also_check_summaries.json. Enforces MAX_PROMPT_TOKENS hard ceiling with
-tiktoken (cl100k_base) — never generates medical text at runtime.
+tiktoken (cl100k_base) and never generates medical text at runtime.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from config import (
 from manual_store import get_manual
 
 # ---------------------------------------------------------------------------
-# Tokenizer (cl100k_base — lightweight, no transformers required)
+# Tokenizer (cl100k_base - lightweight, no transformers required)
 # ---------------------------------------------------------------------------
 
 _ENCODING = tiktoken.get_encoding("cl100k_base")
@@ -54,12 +54,23 @@ _ALSO_CHECK: dict[str, str] = _load_also_check()
 # ---------------------------------------------------------------------------
 
 _PROMPT_TEMPLATE = """\
-You are an emergency first-aid assistant. Using the steps in the MANUAL below, give numbered guidance that directly addresses the situation. Select only the steps that apply — skip irrelevant ones. Use direct second-person language. Begin immediately with "1." — no introductory sentence.
-
-MANUAL:
+You are anfirst-aid assistant. Use only the REFERENCE
+RULES:
+- Start with "1."
+- Pick only the actions from STEPS that apply to the user's exact situation.
+- Include relevent "Do NOT" warnings when needed.
+- Put the most urgent action first.
+- Do not add advice that is not present in the reference.
+- No markdown. No extra text.
+REFERENCE:
 {manual}"""
 
-_ALSO_CHECK_TEMPLATE = "ALSO CHECK: {category} — {summary}"
+_ALSO_CHECK_TEMPLATE = """
+
+OPTIONAL:
+Category: {category}
+Use only if clearly supported by the user's words. Otherwise ignore.
+{summary}"""
 
 
 # ---------------------------------------------------------------------------
@@ -131,24 +142,22 @@ def build_prompt(
     Returns:
         Assembled prompt string within MAX_PROMPT_TOKENS.
     """
+    del query  # The user query is passed separately as the user message.
+
     manual = get_manual(primary_category) or ""
 
-    # Build primary-only prompt first
     primary_prompt = _PROMPT_TEMPLATE.format(manual=manual)
 
-    if secondary_category and secondary_category != primary_category:
+    if secondary_category and secondary_category != primary_category and secondary_category != "out_of_domain":
         also_check_summary = _ALSO_CHECK.get(secondary_category, "")
         if also_check_summary:
             also_check_block = _ALSO_CHECK_TEMPLATE.format(
                 category=secondary_category.replace("_", " ").title(),
                 summary=also_check_summary,
             )
-            # Insert also-check block after the manual
-            manual_with_also = manual + "\n\n" + also_check_block
-            combined_prompt = _PROMPT_TEMPLATE.format(
-                manual=manual_with_also
-            )
+            manual_with_also = manual + also_check_block
+            combined_prompt = _PROMPT_TEMPLATE.format(manual=manual_with_also)
             if count_tokens(combined_prompt) <= MAX_PROMPT_TOKENS:
                 return combined_prompt
-            # Over token ceiling — drop secondary block entirely
+
     return primary_prompt

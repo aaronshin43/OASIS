@@ -18,7 +18,6 @@ import {
   RecognizeAudioFunction,
   TTSProcessorFunction,
 } from "./interface";
-import { vectorDB, embedText } from "./knowledge";
 
 dotenv.config();
 
@@ -84,6 +83,4 @@ export {
   chatWithLLMStream,
   ttsProcessor,
   resetChatHistory,
-  vectorDB,
-  embedText,
 };

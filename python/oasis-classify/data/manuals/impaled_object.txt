@@ -7,6 +7,5 @@ STEPS:
 4. Secure padding with bandages; do not press down on the object.
 5. Control bleeding by pressing surrounding tissue, not the object itself.
 
-NEVER DO:
 - Do NOT remove the object regardless of its size or location.
 - Do NOT press directly on the object.

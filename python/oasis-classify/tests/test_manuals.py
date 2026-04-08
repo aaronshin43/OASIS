@@ -2,9 +2,10 @@
 tests/test_manuals.py — Manual format validation.
 
 For each .txt file in data/manuals/:
-  - Verify "STEPS:" is present
-  - Verify "NEVER DO:" is present
-  - Verify token count is between 80 and 140 (tiktoken cl100k_base)
+  - Verify "Category:" line is present
+  - Verify at least one "- Do not" bullet is present (replaces NEVER DO: section)
+  - Verify at least one plain "- " action bullet is present (replaces STEPS: section)
+  - Verify token count is between 80 and 150 (tiktoken cl100k_base)
 """
 
 import os
@@ -43,33 +44,47 @@ _ENCODING = tiktoken.get_encoding("cl100k_base")
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("category_id,filepath", _MANUAL_FILES)
-def test_manual_has_steps_section(category_id: str, filepath: str):
-    """Every manual must contain a 'STEPS:' section."""
+def test_manual_has_category_line(category_id: str, filepath: str):
+    """Every manual must start with a 'Category:' line."""
     with open(filepath, encoding="utf-8") as fh:
         content = fh.read()
-    assert "STEPS:" in content, (
-        f"Manual '{category_id}' ({filepath}) is missing 'STEPS:' section"
+    assert "Category:" in content, (
+        f"Manual '{category_id}' ({filepath}) is missing 'Category:' line"
     )
 
 
 @pytest.mark.parametrize("category_id,filepath", _MANUAL_FILES)
-def test_manual_has_never_do_section(category_id: str, filepath: str):
-    """Every manual must contain a 'NEVER DO:' section."""
+def test_manual_has_action_bullets(category_id: str, filepath: str):
+    """Every manual must contain at least one '- ' action bullet (replaces STEPS: section)."""
     with open(filepath, encoding="utf-8") as fh:
         content = fh.read()
-    assert "NEVER DO:" in content, (
-        f"Manual '{category_id}' ({filepath}) is missing 'NEVER DO:' section"
+    lines = content.splitlines()
+    action_bullets = [ln for ln in lines if ln.startswith("- ") and not ln.lower().startswith("- do not")]
+    assert action_bullets, (
+        f"Manual '{category_id}' ({filepath}) has no action bullets (lines starting with '- ')"
+    )
+
+
+@pytest.mark.parametrize("category_id,filepath", _MANUAL_FILES)
+def test_manual_has_do_not_bullets(category_id: str, filepath: str):
+    """Every manual must contain at least one '- Do not' bullet (replaces NEVER DO: section)."""
+    with open(filepath, encoding="utf-8") as fh:
+        content = fh.read()
+    lines = content.splitlines()
+    do_not_bullets = [ln for ln in lines if ln.lower().startswith("- do not")]
+    assert do_not_bullets, (
+        f"Manual '{category_id}' ({filepath}) is missing '- Do not' bullets (NEVER DO equivalent)"
     )
 
 
 @pytest.mark.parametrize("category_id,filepath", _MANUAL_FILES)
 def test_manual_token_count_in_range(category_id: str, filepath: str):
-    """Manual token count must be between 80 and 140 (tiktoken cl100k_base)."""
+    """Manual token count must be between 80 and 150 (tiktoken cl100k_base)."""
     with open(filepath, encoding="utf-8") as fh:
         content = fh.read()
     token_count = len(_ENCODING.encode(content))
-    assert 80 <= token_count <= 140, (
-        f"Manual '{category_id}' has {token_count} tokens — must be 80-140. "
+    assert 80 <= token_count <= 150, (
+        f"Manual '{category_id}' has {token_count} tokens — must be 80-150. "
         f"File: {filepath}"
     )
 

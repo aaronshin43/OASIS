@@ -70,8 +70,8 @@ class TestLLMPromptModeTier0:
         result = dispatch("cpr")
         assert result.mode == "llm_prompt"
         assert result.system_prompt is not None
-        assert "STEPS" in result.system_prompt
-        assert "NEVER DO" in result.system_prompt
+        assert "Category:" in result.system_prompt
+        assert "- Do not" in result.system_prompt
         assert result.response_text is None
         assert result.threshold_path == "tier0_short"
 
@@ -229,5 +229,5 @@ class TestMultiLabelTokenCeiling:
         from prompt_builder import build_prompt
 
         prompt = build_prompt("test query", "cpr")
-        assert "STEPS" in prompt
-        assert "NEVER DO" in prompt
+        assert "Category:" in prompt
+        assert "- Do not" in prompt

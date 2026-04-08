@@ -7,7 +7,8 @@ def sanitize_chunk(chunk: str) -> str:
     Ported from OasisAdapter.ts sanitizeOasisChunk().
     Applied to every token before display and before TTS sentence buffer.
     """
-    chunk = re.sub(r'\*+', '', chunk)                      # **bold** / *italic*
-    chunk = re.sub(r'`+', '', chunk)                        # `code` backticks
-    chunk = re.sub(r'^#+\s*', '', chunk, flags=re.MULTILINE)  # ### headings
+    chunk = re.sub(r"\*+", "", chunk)                       # **bold** / *italic*
+    chunk = re.sub(r"`+", "", chunk)                         # `code` backticks
+    chunk = re.sub(r"[—–]", "; ", chunk)                    # normalize unicode dashes for safer TTS pauses
+    chunk = re.sub(r"^#+\s*", "", chunk, flags=re.MULTILINE)  # ### headings
     return chunk

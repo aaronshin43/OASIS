@@ -4,66 +4,67 @@ Key decisions made during O.A.S.I.S. development. Each entry records what was de
 
 ---
 
-## DEC-001: Embedding model — gte-small
+## DEC-001: oasis-classify over oasis-rag
 
-**Decision:** Use `thenlper/gte-small` (384-dim, ~67MB) via sentence-transformers directly.
+**Decision:** Replace the 3-Stage Hybrid RAG pipeline (FAISS + gte-small, port 5001) with the centroid-based intent classifier + pre-generated manual dispatch (port 5002).
 
-**Rejected alternatives:**
-- `all-MiniLM-L6-v2` — already installed in repo, but 4.5% lower accuracy on benchmark
-- `mxbai-embed-large` — already in Ollama, but 670MB RAM; exceeds Pi5 memory budget and blocks concurrent LLM
+**Rejected alternative:** Keep oasis-rag as the primary pipeline.
 
-**Why gte-small:** Best accuracy/size tradeoff for medical retrieval; sentence-transformers native (no Ollama overhead). First run requires internet to download (~67MB); after that fully offline.
-
----
-
-## DEC-002: Vector DB — FAISS over ChromaDB
-
-**Decision:** FAISS `IndexFlatIP` (in-memory, cosine via L2-normalized inner product).
-
-**Rejected:** ChromaDB — adds 150MB RAM, requires separate server process, and its metadata filter is redundant because Stage 1 lexical filtering already does candidate narrowing.
-
-**Why FAISS:** Matches Pocket RAG paper design; already installed via oasis-matcher.py; Stage 1 handles filtering so FAISS only needs flat search over top-50 candidates.
+**Why classify:**
+- **Latency:** RAG pipeline required ~400–800ms on Pi5 for embedding + FAISS search + compression. Classify Tier 0 resolves in ~0ms (dict lookup); Tier 1 in ~10–100ms (single centroid cosine).
+- **Prompt size:** RAG produced 500–800 token prompts from compressed context chunks. Classify produces 200–350 token prompts from pre-written manuals, reducing LLM TTFT from ~16s to ~3–6s on Pi5.
+- **Reliability:** RAG required FAISS index to be built and loaded (~374 chunks, ~67MB model). Classify requires only `centroids.npy` (33 × 384 float32, < 1MB) and plain text manuals.
+- **Medical accuracy:** Pre-written manuals (STEPS + NEVER DO) are human-reviewed and follow a fixed format, eliminating the risk of the LLM receiving poorly compressed or off-topic RAG chunks.
 
 ---
 
-## DEC-003: RAG service in Python Flask, not Node.js
+## DEC-002: Tier 0 fast path (dict lookup before embedding)
 
-**Decision:** Implement RAG pipeline as a separate Python Flask service on `:5001`.
+**Decision:** Before calling gte-small, attempt zero-latency dict lookups in `short_queries.json` (≤ 3 words) and `sentence_matches.json` (> 3 words).
 
-**Rejected:** Port RAG to TypeScript using `@xenova/transformers`.
+**Why:** Common emergency phrases ("cpr", "she's choking", "someone is bleeding") are highly predictable in ASR output. A dict lookup resolves these in ~0ms with no GPU/CPU cost, ensuring the fastest possible path for the most critical queries.
 
-**Why Python:** `sentence-transformers` is Python-native and runs 2–3× faster than the JS port. FAISS Python bindings are more stable. Keeps the existing Node.js chatbot unchanged — OasisAdapter just calls HTTP.
-
----
-
-## DEC-004: 3-tier fallback in OasisAdapter
-
-**Decision:** RAG failure degrades gracefully in three tiers:
-1. Python RAG Flask (`/retrieve`) — primary
-2. `oasis-matcher-node.ts` — embedded protocol matcher, no server needed
-3. Empty prompt — LLM responds with "call emergency services"
-
-**Why:** Pi5 boots services sequentially; RAG service may not be ready when first query arrives. Having an embedded fallback prevents silent failures in safety-critical situations.
+**Guard:** Tier 0A is restricted to queries ≤ 3 words (`TIER0_MAX_WORDS`) to prevent false positives from keyword-only matching on full sentences.
 
 ---
 
-## DEC-005: SectionAwareChunker (H3-boundary chunking)
+## DEC-003: Stateless service + TypeScript-managed triage hint TTL
 
-**Decision:** Split at H3 (`###`) boundaries, merge sections < 80 tokens with sibling sections under the same H2. Named `SectionAwareChunker` in `document_chunker.py`.
+**Decision:** The Python classify service is fully stateless. Multi-turn triage context (hint) is held in TypeScript (`ChatFlow.ts`) with a 60-second TTL and passed as `prev_triage_hint` on each `/dispatch` call.
 
-**Rejected:** Sliding window (300-token, 50-token overlap) — created 547 micro-chunks averaging 20 tokens, severely degrading embedding quality and causing unrelated body-part sections (e.g., "Broken Finger" and "Rib Fracture") to share chunks.
+**Rejected:** Session state in Python (e.g., server-side conversation memory).
 
-**Why SectionAwareChunker:** H3 level aligns with medical procedure boundaries in WHO BEC and Red Cross documents. Minimum-size merge prevents empty embeddings while respecting anatomical separation.
+**Why stateless:** The service runs on Pi5 and may be restarted at any time. Stateless design eliminates stale session bugs, simplifies testing, and allows multiple TypeScript clients without coordination. The 60s TTL matches the realistic window in which a follow-up question relates to the previous triage turn.
 
 ---
 
-## DEC-006: context_injector.py as single source of truth
+## DEC-004: Two-threshold scoring band (OOD_FLOOR + CLASSIFY_THRESHOLD)
 
-**Decision:** All 22 emergency signal injection rules live exclusively in `python/oasis-rag/context_injector.py`. The Python `/retrieve` endpoint applies injections before returning context.
+**Decision:** Use two separate score thresholds with distinct semantics:
+- `OOD_FLOOR = 0.30` — below this, return OOD response immediately (query has no medical relevance)
+- `CLASSIFY_THRESHOLD = 0.65` — above this, treat as a confident category match and build a prompt
 
-**Rejected:** Keep injection logic split across `chat_test.py`, `test_llm_response.py`, and `OasisAdapter.ts`.
+The band `[0.30, 0.65)` triggers triage — the LLM asks a clarifying question.
 
-**Why:** Prior to Phase 1 fix, `OasisAdapter.ts` (the production path) only had 2 of 22 signals (spinal, seizure). The remaining 20 protocols were missing from real device operation. Single-source ensures test and production paths are identical.
+**Why two thresholds:** The OOD floor and the confidence threshold represent different decisions. Merging them would either produce triage prompts for obviously non-medical queries or skip triage for genuinely ambiguous medical queries.
+
+---
+
+## DEC-005: Pre-written manuals as sole medical content source
+
+**Decision:** All medical protocol content lives in `data/manuals/*.txt` (STEPS + NEVER DO format, 80–140 tokens each). The LLM prompt contains only the manual text + query — no retrieved chunks, no summarization.
+
+**Rejected:** Dynamic context from retrieved document chunks (RAG approach).
+
+**Why:** Pre-written manuals are human-reviewed, format-controlled, and sized to fit the 1b LLM's context window reliably. Dynamic retrieval introduces the risk of off-topic chunks, compression artifacts, and variable prompt length. For the 32 well-defined emergency categories covered by this system, pre-written manuals are more reliable than retrieval.
+
+---
+
+## DEC-006: tiktoken for token counting (not transformers.AutoTokenizer)
+
+**Decision:** `prompt_builder.py` uses `tiktoken` (cl100k_base) to enforce the `MAX_PROMPT_TOKENS = 400` ceiling, not `transformers.AutoTokenizer`.
+
+**Why:** `transformers.AutoTokenizer` requires loading a full tokenizer model (~50–200MB). On Pi5, loading it in a hot path adds unacceptable memory and latency overhead. `tiktoken` is ~1MB, pure Python, and fast enough for runtime enforcement. The token counts are slightly different from the LLM's actual tokenizer, but the 400-token ceiling has enough headroom to absorb the difference.
 
 ---
 
@@ -71,98 +72,25 @@ Key decisions made during O.A.S.I.S. development. Each entry records what was de
 
 **Decision:** Current LLM is `gemma3:1b` via Ollama.
 
-**Context:** Model evaluation on 35 LLM+RAG tests (2026-03-15):
+**Context:** Model evaluation on 35 LLM response tests (2026-03-15):
 
-| Model | Critical pass | CPR (LLM-002) | Pi5 latency est. | RAM |
+| Model | Critical pass | CPR | Pi5 latency est. | RAM |
 |-------|:---:|:---:|:---:|:---:|
 | qwen3.5:0.8b | 95.2% | **100%** | ~64s | 1.0 GB |
 | gemma3:1b | 85.7% | **0%** | ~62s | 0.8 GB |
 | gemma3:4b Q4 | higher | high | ~8–12s | 3.0 GB |
 | phi-4-mini Q4 | high | high | ~7–10s | 2.8 GB |
 
-**Note:** gemma3:1b scored 0% on CPR (LLM-002) during model comparison but was adopted after context injection improvements; current validation shows 109/109 PASS on RAG layer. Upgrade to `phi-4-mini Q4` or `gemma3:4b Q4` is planned (Phase 3) pending Pi5 memory profiling.
+**Note:** Upgrade to `phi-4-mini Q4` or `gemma3:4b Q4` is planned pending Pi5 memory profiling. With classify reducing prompt size to ~200–350 tokens, the LLM handles shorter context and latency estimates may improve.
 
 ---
 
-## DEC-008: Hybrid scoring α = 0.6 (semantic) + 0.4 (lexical)
+## DEC-008: gte-small as embedding model
 
-**Decision:** `hybrid_score = 0.6 × cosine_similarity + 0.4 × lexical_overlap`
+**Decision:** Use `thenlper/gte-small` (384-dim, ~67MB) for both centroid computation (`build_centroids.py`) and Tier 1 query embedding (`classifier.py`).
 
-**Why not pure dense:** Medical emergency queries contain exact clinical terms ("tourniquet", "epinephrine", "30:2") that must match lexically. Pure cosine retrieval caused anatomically wrong documents to rank above correct ones in early tests.
+**Rejected alternatives:**
+- `all-MiniLM-L6-v2` — lower accuracy on medical query clustering in internal tests
+- `mxbai-embed-large` — 670MB RAM; exceeds Pi5 memory budget when running concurrently with Ollama
 
-**Why not pure lexical:** Panicked, typo-heavy, or colloquial queries ("shes shaking eyes rolled back") need semantic understanding that BM25 alone misses.
-
-**Tuning note:** α is defined in `python/oasis-rag/config.py` and does not require index rebuild to change.
-
----
-
-## DEC-010: Two-threshold retrieval confidence gate
-
-**Decision:** Use two separate thresholds with different semantics:
-- `SCORE_THRESHOLD = 0.10` — structural noise floor in `retriever.py`; chunks below this are discarded entirely during Stage 2
-- `CONFIDENCE_THRESHOLD = 0.35` — service-layer confidence gate in `app.py`; if the best returned chunk's score is below this, `LOW_CONFIDENCE_PROMPT` is delivered to the LLM instead of the full RAG template
-
-**Why two thresholds, not one:** The structural threshold is a retrieval concern (discard noise); the confidence threshold is a prompt-selection concern (decide what to tell the LLM). Merging them into one would conflate retrieval mechanics with service behaviour, and would also break the 109 validation tests which test `Retriever` directly.
-
-**Why the check is in `app.py`, not `retriever.py`:** `retriever.py` is a pure retrieval engine. Confidence evaluation — determining what to tell the LLM — is a service-layer decision. This keeps the retriever testable in isolation and the 109 tests unchanged.
-
-**Why `LOW_CONFIDENCE_PROMPT` instead of empty context:** Returning empty context silently to `build_system_prompt` would produce `SAFE_FALLBACK_PROMPT` ("KB unavailable"), which is misleading when the KB is healthy but has no relevant answer. A distinct prompt is more honest and more useful to the user.
-
-**Threshold value rationale:** 0.35 sits between the noise floor (0.10) and well-matched medical chunks (typically 0.60+). EDG-004/005 (off-topic queries) score below 0.50 in validation, confirming off-topic queries will trigger the gate. Tune via `config.py` — no index rebuild required.
-
----
-
-## DEC-011: Test suite restructured into tests/ with unit/ tier
-
-**Decision:** Consolidated all test files under `python/oasis-rag/tests/`, with a dedicated `tests/unit/` subdirectory for model-free unit tests. The old `validation/` directory retains only LLM-gate tests and utilities; `tools/` retains only manual development helpers.
-
-**Previous state:** Tests were scattered across three locations — `validation/` (integration), `tools/` (overlap with validation), and no unit tests existed. Four files tested the same "keyword in context" condition (test_retrieval_accuracy, test_coverage, test_source_quality, test_context_quality), and two files measured latency (test_latency + benchmark.py).
-
-**Rejected alternative:** Keep dual `validation/` + `tools/` structure — rejected because redundant files caused maintenance drift (fixing a test failure required updating multiple files) and the absence of unit tests made it hard to isolate which pipeline stage was responsible for a failure.
-
-**Why this structure:** Clear tier separation — unit tests (no model, fast), integration tests (model required, no Flask), LLM gate (model + Flask). Deleting 5 redundant files (test_coverage, test_source_quality, test_context_quality, benchmark, run_all_tests) reduced total test count from ~180 cases across files to 117 canonical cases with no duplication. `test_retrieval_accuracy.py` was the strictest (checks both keywords AND source document) so it was kept as the authority; the others were subsets.
-
----
-
-## DEC-012: Unit tests added for context_injector, compressor, medical_keywords
-
-**Decision:** Added three unit test files (CI × 25, COMP × 10, MKW × 8) that test pipeline components in isolation — no embedding model or FAISS index required.
-
-**Why these three modules:** They contain non-trivial logic that was previously only verified indirectly through integration tests. Failures in integration tests (e.g., a wrong keyword in context) were ambiguous: was it a retrieval failure, a compression failure, or a signal injection failure? Unit tests provide the missing signal.
-
-**Key design choices:**
-- `test_context_injector.py`: one test per signal (CI-001..022) so a regression pinpoints exactly which signal broke, plus three special-case tests (mutual exclusion, append-at-end, empty query)
-- `test_compressor.py`: explicitly tests safety-critical invariants — "Do not" / "Never" sentences must survive compression regardless of relevance score
-- `test_medical_keywords.py`: MKW-007 uses "programming syntax errors in javascript code" (not a weather/temperature query) because terms like "warm" exist in the temperature_emergencies taxonomy and would produce a false positive
-
----
-
-## DEC-013: Per-stage latency tests absorbed into test_latency.py
-
-**Decision:** Merged `tools/benchmark.py` per-stage timing into `tests/test_latency.py` as LAT-S1/S2/S3 test cases. benchmark.py was deleted.
-
-**Stage targets:** S1 (lexical filter) < 5ms, S2 (semantic rerank) < 500ms, S3 (compression) < 50ms.
-
-**Why merged:** benchmark.py and test_latency.py both measured retrieval latency with different methodologies. Having them separate meant a latency regression might be caught in one but not tracked in the CI gate. Merging makes per-stage timing part of the 117-test suite so it is always run and always enforced.
-
-**Implementation:** `test_latency.run(retriever, store)` accepts an optional `store` parameter. If provided, `_bench_stages(store)` runs isolated Stage 1/2/3 timing (5 queries × 5 warmup runs). If omitted, only E2E tests run — backward compatible with any caller that passes only `retriever`.
-
----
-
-## DEC-014: validation/run_all.py kept as backward-compat stub
-
-**Decision:** After moving the test suite to `tests/run_all.py`, `validation/run_all.py` was replaced with a two-line stub using `runpy.run_path` that delegates to the new location.
-
-**Why not delete it:** The old path (`python validation/run_all.py`) is in shell history, CI scripts, and developer muscle memory. A stub costs nothing and prevents silent failures for anyone using the old path.
-
-**Why runpy over a shell alias or symlink:** Works cross-platform (Windows + Linux/Pi5) without filesystem-level tricks, and preserves `__main__` semantics so `sys.exit()` in the real runner propagates correctly.
-
----
-
-## DEC-009: text_with_prefix embedding format
-
-**Decision:** Index chunks using `text_with_prefix` (heading breadcrumb + content) rather than raw content only.
-
-**Why:** Increases vector distance between anatomically different sections (e.g., "Broken Finger" under hand injuries vs "Rib Fracture" under chest injuries), reducing cross-anatomy false matches in Stage 2 retrieval.
-
-**Implementation:** `indexer.py` passes `m["text_with_prefix"]` to the encoder instead of `m["text"]`.
+**Why gte-small:** Best accuracy/size tradeoff for medical intent clustering. First run downloads ~67MB; after that fully offline.

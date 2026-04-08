@@ -81,8 +81,7 @@ async function runQuery(query: string): Promise<void> {
     let firstToken = 0;
     const llmStart = Date.now();
 
-    await new Promise<void>((resolve, reject) => {
-        chatWithLLMStream(
+    await chatWithLLMStream(
             messages,
             (partial) => {
                 if (!firstToken) {
@@ -94,11 +93,9 @@ async function runQuery(query: string): Promise<void> {
             () => {
                 const total = Date.now() - llmStart;
                 console.log(`\n[LLM total: ${total}ms]`);
-                resolve();
             },
             () => { /* ignore thinking tokens */ },
         );
-    });
 }
 
 async function interactive(): Promise<void> {
