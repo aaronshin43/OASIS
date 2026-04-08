@@ -39,3 +39,6 @@ ensureDirExists(chatHistoryDir);
 
 export const oasisLogDir = path.join(dataDir, "oasis_logs");
 ensureDirExists(oasisLogDir);
+
+export const testResultsDir = path.join(dataDir, "test_results");
+ensureDirExists(testResultsDir);
