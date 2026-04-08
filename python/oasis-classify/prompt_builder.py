@@ -1,9 +1,9 @@
 """
-prompt_builder.py — Assembles compact LLM prompts from pre-written manuals.
+prompt_builder.py - Assembles compact LLM prompts from pre-written manuals.
 
 Handles multi-label: primary manual + short "also check" block pulled from
 data/also_check_summaries.json. Enforces MAX_PROMPT_TOKENS hard ceiling with
-tiktoken (cl100k_base) — never generates medical text at runtime.
+tiktoken (cl100k_base) and never generates medical text at runtime.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from config import (
 from manual_store import get_manual
 
 # ---------------------------------------------------------------------------
-# Tokenizer (cl100k_base — lightweight, no transformers required)
+# Tokenizer (cl100k_base - lightweight, no transformers required)
 # ---------------------------------------------------------------------------
 
 _ENCODING = tiktoken.get_encoding("cl100k_base")
@@ -54,12 +54,27 @@ _ALSO_CHECK: dict[str, str] = _load_also_check()
 # ---------------------------------------------------------------------------
 
 _PROMPT_TEMPLATE = """\
-First-aid assistant. Using the REFERENCE below, give numbered step-by-step guidance for the user's situation. Select only what applies. Most critical first. No intro — start with 1. Plain text only. Only use information from the REFERENCE — do not add anything else. No disclaimers.
+You are OASIS, an offline first-aid assistant.
+Use only the PRIMARY REFERENCE below. The user's exact situation will be provided separately.
 
-REFERENCE:
+Output rules:
+- Start directly with "1." and use plain text only.
+- Give 3 to 5 numbered lines total.
+- Pick only the actions from STEPS that apply to the user's exact situation.
+- Include 1 or 2 "Do NOT" warnings only when relevant to the user's exact situation.
+- Put the most urgent action first.
+- Do not add advice that is not present in the reference.
+- Do not give introductions, explanations, or disclaimers.
+
+PRIMARY REFERENCE:
 {manual}"""
 
-_ALSO_CHECK_TEMPLATE = "ALSO CHECK: {category} — {summary}"
+_ALSO_CHECK_TEMPLATE = """
+
+OPTIONAL SECONDARY REFERENCE:
+Category: {category}
+Use this only if the user's words clearly support it. Otherwise ignore it completely.
+{summary}"""
 
 
 # ---------------------------------------------------------------------------
@@ -131,9 +146,10 @@ def build_prompt(
     Returns:
         Assembled prompt string within MAX_PROMPT_TOKENS.
     """
+    del query  # The user query is passed separately as the user message.
+
     manual = get_manual(primary_category) or ""
 
-    # Build primary-only prompt first
     primary_prompt = _PROMPT_TEMPLATE.format(manual=manual)
 
     if secondary_category and secondary_category != primary_category and secondary_category != "out_of_domain":
@@ -143,10 +159,9 @@ def build_prompt(
                 category=secondary_category.replace("_", " ").title(),
                 summary=also_check_summary,
             )
-            # Insert also-check block after the manual
-            manual_with_also = manual + "\n\n" + also_check_block
+            manual_with_also = manual + also_check_block
             combined_prompt = _PROMPT_TEMPLATE.format(manual=manual_with_also)
             if count_tokens(combined_prompt) <= MAX_PROMPT_TOKENS:
                 return combined_prompt
-            # Over token ceiling — drop secondary block entirely
+
     return primary_prompt
