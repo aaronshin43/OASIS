@@ -5,16 +5,13 @@
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "node -r ts-node/register/transpile-only -r tsconfig-paths/register dist/index.js",
-    "index-knowledge": "node -r ts-node/register -r tsconfig-paths/register dist/index-knowledge.js",
     "upgrade-env": "node -r ts-node/register -r tsconfig-paths/register dist/upgrade-env.js",
     "postinstall": "patch-package",
     "test:ollama": "ts-node -r tsconfig-paths/register src/test/ollama-text-test.ts",
-    "rag:index": "ts-node -r tsconfig-paths/register src/test/rag-test.ts index",
-    "rag:search": "ts-node -r tsconfig-paths/register src/test/rag-test.ts search",
-    "rag:chat": "ts-node -r tsconfig-paths/register src/test/rag-llm-test.ts",
     "test:oasis": "ts-node -r tsconfig-paths/register src/test/oasis-test.ts",
     "test:classify": "ts-node -r tsconfig-paths/register src/test/classify-text-test.ts",
     "test:classify:batch": "ts-node -r tsconfig-paths/register src/test/classify-batch-test.ts",
+    "test:classify:report": "python scripts/batch_report.py",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
