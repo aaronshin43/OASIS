@@ -11,6 +11,8 @@ IS_PI = platform.machine().startswith("aarch")
 PIPER_BINARY = os.getenv("PIPER_BINARY_PATH", "/home/pi/piper/piper/piper")
 PIPER_MODEL = os.getenv("PIPER_MODEL_PATH", "/home/pi/piper/voices/en_US-amy-medium.onnx")
 SOUND_CARD_INDEX = os.getenv("SOUND_CARD_INDEX", "1")
+PIPER_SENTENCE_SILENCE = os.getenv("PIPER_SENTENCE_SILENCE", "0.3")
+PIPER_LENGTH_SCALE = os.getenv("PIPER_LENGTH_SCALE", "1.0")
 
 _FLUSH = "__FLUSH__"
 _STOP  = "__STOP__"
@@ -98,7 +100,9 @@ class TTSPlaybackWorker(QThread):
 
             proc = subprocess.Popen(
                 [PIPER_BINARY, "--model", PIPER_MODEL,
-                 "--sentence-silence", "1", "--output_file", wav_path],
+                 "--sentence-silence", PIPER_SENTENCE_SILENCE,
+                 "--length_scale", PIPER_LENGTH_SCALE,
+                 "--output_file", wav_path],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
