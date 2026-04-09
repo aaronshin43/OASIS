@@ -9,8 +9,4 @@
 - [ ] 10 second is fine
 - [ ] hallucinating is the biggest enemy (liability)
 
-- [ ] 911 tts
-- [ ] tts 속도 up
-- [ ] gui 닫기 버튼
 - [ ] pi 바탕화면에 gui app 추가 (python service도 같이 실행해야함 python/oasis-classify/service.py)
-- [ ] 짧게 버튼 누르면 ai 응답 중단
