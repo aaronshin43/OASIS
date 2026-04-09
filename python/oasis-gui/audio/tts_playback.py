@@ -3,6 +3,7 @@ import os
 import signal
 import subprocess
 import tempfile
+import threading
 import platform
 from queue import Queue, Empty
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -26,7 +27,8 @@ class TTSPlaybackWorker(QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._queue: Queue = Queue()
+        self._sentence_queue: Queue = Queue()
+        self._wav_queue: Queue = Queue()
         self._abort = False
         self._current_process: subprocess.Popen | None = None
 
@@ -34,24 +36,24 @@ class TTSPlaybackWorker(QThread):
 
     def queue_sentence(self, sentence: str):
         if _TTS_AVAILABLE and not self._abort:
-            self._queue.put(sentence)
+            self._sentence_queue.put(sentence)
 
     def flush(self):
         """Signal that LLM stream is done — play remaining, then emit playback_finished."""
-        self._queue.put(_FLUSH)
+        self._sentence_queue.put(_FLUSH)
 
     def cancel(self):
-        """Interrupt — stop current playback and drain queue."""
+        """Interrupt — stop current playback and drain queues."""
         self._abort = True
         self._kill_current()
-        # Drain queue
-        while not self._queue.empty():
+        # Drain sentence queue
+        while not self._sentence_queue.empty():
             try:
-                self._queue.get_nowait()
+                self._sentence_queue.get_nowait()
             except Empty:
                 break
-        # Put flush so thread doesn't block forever
-        self._queue.put(_FLUSH)
+        # Wake synth thread so it forwards FLUSH → wav queue → play loop unblocks
+        self._sentence_queue.put(_FLUSH)
 
     def reset(self):
         """Prepare for next query (called before new recording starts)."""
@@ -61,14 +63,45 @@ class TTSPlaybackWorker(QThread):
         """Graceful shutdown — called on app exit."""
         self._abort = True
         self._kill_current()
-        self._queue.put(_STOP)
+        self._sentence_queue.put(_STOP)
 
-    # ── Thread loop ───────────────────────────────────────────────────
+    # ── Thread loops ──────────────────────────────────────────────────
 
     def run(self):
+        """QThread entry: start synth thread, run play loop in this thread."""
         print(f"[TTS] Worker started (piper available: {_TTS_AVAILABLE})")
+        synth_thread = threading.Thread(target=self._synth_loop, daemon=True)
+        synth_thread.start()
+        self._play_loop()
+
+    def _synth_loop(self):
+        """Synthesis thread: sentence_queue → wav_queue.
+
+        Runs concurrently with _play_loop so the next sentence is synthesized
+        while the current one is still playing.
+        """
         while True:
-            item = self._queue.get()
+            item = self._sentence_queue.get()
+
+            if item == _STOP:
+                self._wav_queue.put(_STOP)
+                break
+
+            if item == _FLUSH:
+                self._wav_queue.put(_FLUSH)
+                continue
+
+            if self._abort:
+                continue
+
+            wav_path = self._synthesize(item)
+            if wav_path:
+                self._wav_queue.put(wav_path)
+
+    def _play_loop(self):
+        """Play loop: wav_queue → audio output."""
+        while True:
+            item = self._wav_queue.get()
 
             if item == _STOP:
                 break
@@ -79,20 +112,23 @@ class TTSPlaybackWorker(QThread):
                 continue
 
             if self._abort:
-                continue
-
-            # Synthesize + play
-            wav_path = self._synthesize(item)
-            if wav_path and not self._abort:
-                self._play(wav_path)
                 try:
-                    os.unlink(wav_path)
+                    os.unlink(item)
                 except OSError:
                     pass
+                continue
+
+            self._play(item)
+            try:
+                os.unlink(item)
+            except OSError:
+                pass
+
+    # ── Synthesis & playback ──────────────────────────────────────────
 
     def _synthesize(self, text: str) -> str | None:
         """Piper binary: stdin text → WAV file."""
-        if not _TTS_AVAILABLE:
+        if not _TTS_AVAILABLE or self._abort:
             return None
         try:
             fd, wav_path = tempfile.mkstemp(suffix=".wav", prefix="oasis_tts_")
@@ -111,6 +147,13 @@ class TTSPlaybackWorker(QThread):
             proc.stdin.close()
             proc.wait(timeout=15)
 
+            if self._abort:
+                try:
+                    os.unlink(wav_path)
+                except OSError:
+                    pass
+                return None
+
             if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
                 return wav_path
             return None
@@ -119,7 +162,7 @@ class TTSPlaybackWorker(QThread):
             return None
 
     def _play(self, wav_path: str):
-        """Play WAV via sox `play` command (blocking)."""
+        """Play WAV via aplay (Pi) or sox play (PC) — blocking."""
         try:
             if IS_PI:
                 play_cmd = ["aplay", "-D", f"plughw:{SOUND_CARD_INDEX},0", wav_path]
