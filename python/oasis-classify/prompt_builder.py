@@ -54,13 +54,12 @@ _ALSO_CHECK: dict[str, str] = _load_also_check()
 # ---------------------------------------------------------------------------
 
 _PROMPT_TEMPLATE = """\
-You are anfirst-aid assistant. Use only the REFERENCE
+You are a first-aid assistant. Use only the REFERENCE below.
 RULES:
 - Start with "1."
-- Pick only the actions from STEPS that apply to the user's exact situation.
-- Include relevent "Do NOT" warnings when needed.
+- Include all actions from STEPS that apply to the user's exact situation.
+- Include 1-2 "Do NOT" warnings when relevant.
 - Put the most urgent action first.
-- Do not add advice that is not present in the reference.
 - No markdown. No extra text.
 REFERENCE:
 {manual}"""
@@ -148,7 +147,7 @@ def build_prompt(
 
     primary_prompt = _PROMPT_TEMPLATE.format(manual=manual)
 
-    if secondary_category and secondary_category != primary_category and secondary_category != "out_of_domain":
+    if False and secondary_category and secondary_category != primary_category and secondary_category != "out_of_domain":  # also_check temporarily disabled
         also_check_summary = _ALSO_CHECK.get(secondary_category, "")
         if also_check_summary:
             also_check_block = _ALSO_CHECK_TEMPLATE.format(

@@ -18,8 +18,8 @@
   "no pulse": "cpr",
   "chest compressions": "cpr",
   "rescue breathing": "cpr",
-  "aed": "cpr",
-  "defibrillator": "cpr",
+  "aed": "aed",
+  "defibrillator": "aed",
 
   "choking": "choking",
   "heimlich": "choking",

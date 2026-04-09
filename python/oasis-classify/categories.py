@@ -26,6 +26,7 @@ class Category:
 CATEGORIES: list[Category] = [
     # Life-threatening emergencies (12)
     Category("cpr",              "CPR / Cardiac Arrest",              "Cardiac arrest, CPR protocol",                          "cpr.md",                    "critical"),
+    Category("aed",              "AED / Defibrillator",               "Automated external defibrillator use, pad placement, shock delivery", "aed.md", "critical"),
     Category("choking",          "Choking / Airway Obstruction",      "Airway obstruction, Heimlich maneuver",                  "airway.md",                 "critical"),
     Category("bleeding",         "Severe Bleeding / Hemorrhage",      "Severe bleeding, hemorrhage control, tourniquet",        "wounds_and_bleeding.md",    "critical"),
     Category("anaphylaxis",      "Anaphylaxis / Severe Allergy",      "Severe allergic reaction, epinephrine, anaphylactic shock","bites_and_stings.md",     "urgent"),

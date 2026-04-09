@@ -20,6 +20,9 @@
     "they are in cardiac arrest",
     "my dad isn't breathing",
     "person stopped breathing suddenly",
+    "person stopped breathing use AED"
+  ],
+  "aed": [
     "how do I use an AED",
     "where do I place the AED pads",
     "automated external defibrillator steps",
@@ -29,7 +32,9 @@
     "I found an AED what do I do",
     "AED is charged and ready",
     "defibrillator pad placement on chest",
-    "turn on the AED and follow the instructions"
+    "turn on the AED and follow the instructions",
+    "how do I operate a defibrillator",
+    "AED is ready to shock do I press it"
   ],
   "choking": [
     "someone is choking",

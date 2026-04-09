@@ -60,7 +60,7 @@ CATEGORY_THRESHOLDS: dict[str, float] = {}
 # Priority levels for multi-label conflict resolution
 # ---------------------------------------------------------------------------
 
-PRIORITY_CRITICAL = ["cpr", "choking", "bleeding"]
+PRIORITY_CRITICAL = ["cpr", "aed", "choking", "bleeding"]
 PRIORITY_URGENT   = ["anaphylaxis", "electric_shock", "poisoning", "drowning"]
 
 # ---------------------------------------------------------------------------
