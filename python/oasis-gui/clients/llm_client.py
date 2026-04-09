@@ -15,11 +15,12 @@ _client = httpx.Client(timeout=60.0)
 # OASIS-mode generation constraints (matches ollama-llm.ts)
 _OASIS_OPTIONS = {
     "num_predict": 200,
-    "temperature": 0.25,
+    "temperature": 0.1,
+    "repeat_penalty": 1.15,
     "num_ctx": 512,
     "num_thread": 4,
 }
-_OASIS_STOP = ["**", "Okay", "Let's", "Here's"]
+_OASIS_STOP = ["Okay", "Let's", "Here's"]
 
 
 def prewarm():

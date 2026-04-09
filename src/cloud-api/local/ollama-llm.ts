@@ -43,8 +43,8 @@ const isOasisMode = process.env.ENABLE_OASIS_MATCHER === "true" || true;
 const oasisOptions = isOasisMode
   ? {
       num_predict: 120,
-      temperature: 0.15,
-      repeat_penalty: 1.1,
+      temperature: 0.1,
+      repeat_penalty: 1.15,
     }
   : undefined;
 
