@@ -59,8 +59,8 @@ const TEST_CASES: TestCase[] = [
     { query: "person is pale cold and sweaty after injury", expected: "shock",      note: "post-trauma shock" },
 
     // AED
-    { query: "aed",                                expected: "cpr",                  note: "Tier 0A keyword" },
-    { query: "how do i use an aed",                expected: "cpr",                  note: "Tier 0B sentence" },
+    { query: "aed",                                expected: "aed",                  note: "Tier 0A keyword" },
+    { query: "how do i use an aed",                expected: "aed",                  note: "Tier 0B sentence" },
 
     // Wildlife / wilderness
     { query: "a bear is charging at me",           expected: "bear_encounter" },
