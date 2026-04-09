@@ -6,10 +6,11 @@ _EMOJI_SPECIAL_RE = re.compile(r'[*#~]|[\U0001F300-\U0001FAFF\u200d\ufe0f]')
 # ── TTS text normalization ─────────────────────────────────────────────────────
 
 # Emergency/hotline numbers — read digit by digit
-_DIGIT_BY_DIGIT: dict[str, str] = {
-    "911": "nine one one",
-    "988": "nine eight eight",
-}
+# Uses negative lookarounds to avoid partial matches (e.g. 9110 untouched)
+_DIGIT_BY_DIGIT: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'(?<!\d)9-?1-?1(?!\d)'), "nine one one"),
+    (re.compile(r'(?<!\d)9-?8-?8(?!\d)'), "nine eight eight"),
+]
 
 _ONES = [
     "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
@@ -38,11 +39,11 @@ def _replace_range(m: re.Match) -> str:
 
 # Unit substitutions: pattern → replacement (applied after range expansion)
 _UNIT_SUBS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r'\bcm\b'),  "centimeter"),
-    (re.compile(r'\bmm\b'),  "millimeter"),
-    (re.compile(r'\bmg\b'),  "milligram"),
-    (re.compile(r'\bml\b'),  "milliliter"),
-    (re.compile(r'\bkg\b'),  "kilogram"),
+    (re.compile(r'\bcm\b'),  "centimeters"),
+    (re.compile(r'\bmm\b'),  "millimeters"),
+    (re.compile(r'\bmg\b'),  "milligrams"),
+    (re.compile(r'\bml\b'),  "milliliters"),
+    (re.compile(r'\bkg\b'),  "kilograms"),
     (re.compile(r'°C\b'),    "degrees Celsius"),
     (re.compile(r'°F\b'),    "degrees Fahrenheit"),
 ]
@@ -56,8 +57,8 @@ def _normalize_for_tts(text: str) -> str:
     Applied only to TTS input — display text is unchanged.
     """
     # 1. Digit-by-digit emergency numbers
-    for numeral, spoken in _DIGIT_BY_DIGIT.items():
-        text = re.sub(rf'\b{numeral}\b', spoken, text)
+    for pattern, spoken in _DIGIT_BY_DIGIT:
+        text = pattern.sub(spoken, text)
 
     # 2. Numeric ranges: 5-10 → five to ten
     text = _RANGE_RE.sub(_replace_range, text)
