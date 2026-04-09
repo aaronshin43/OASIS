@@ -57,6 +57,22 @@ QLabel#footer_text {
     color: #555555;
 }
 
+QPushButton#close_btn {
+    color: #555555;
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    padding: 0 4px;
+}
+
+QPushButton#close_btn:hover {
+    color: #aaaaaa;
+}
+
+QPushButton#close_btn:pressed {
+    color: #ffffff;
+}
+
 QScrollBar:vertical {
     width: 0px;
 }

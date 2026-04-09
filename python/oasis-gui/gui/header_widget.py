@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
 from .theme import get_font_size, HEADER_HEIGHT
 
 
@@ -37,10 +38,17 @@ class HeaderWidget(QWidget):
         self._status.setFont(status_font)
         self._status.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
+        # Close button
+        self._close_btn = QPushButton("✕")
+        self._close_btn.setObjectName("close_btn")
+        self._close_btn.setFixedSize(get_font_size(36), get_font_size(36))
+        self._close_btn.clicked.connect(QApplication.quit)
+
         layout.addWidget(self._dot)
         layout.addWidget(self._title)
         layout.addStretch()
         layout.addWidget(self._status)
+        layout.addWidget(self._close_btn)
 
     def set_status(self, text: str):
         self._status.setText(text)
