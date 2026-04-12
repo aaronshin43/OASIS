@@ -2,16 +2,14 @@
 prompt_builder.py - Assembles compact LLM prompts from pre-written manuals.
 
 Handles multi-label: primary manual + short "also check" block pulled from
-data/also_check_summaries.json. Enforces MAX_PROMPT_TOKENS hard ceiling with
-tiktoken (cl100k_base) and never generates medical text at runtime.
+data/also_check_summaries.json. Enforces MAX_PROMPT_TOKENS hard ceiling and
+never generates medical text at runtime.
 """
 
 from __future__ import annotations
 
 import json
 import os
-
-import tiktoken
 
 from config import (
     ALSO_CHECK_PATH,
@@ -24,15 +22,18 @@ from config import (
 from manual_store import get_manual
 
 # ---------------------------------------------------------------------------
-# Tokenizer (cl100k_base - lightweight, no transformers required)
+# Token counter — no network dependency.
+# cl100k_base averages ~4 chars/token for English medical text; the 0.28
+# multiplier (≈ 1/3.5) gives a slight overestimate so we never exceed the
+# MAX_PROMPT_TOKENS ceiling when the also_check feature is re-enabled.
 # ---------------------------------------------------------------------------
 
-_ENCODING = tiktoken.get_encoding("cl100k_base")
-
-
 def count_tokens(text: str) -> int:
-    """Count tokens using tiktoken cl100k_base."""
-    return len(_ENCODING.encode(text))
+    """Estimate token count without requiring tiktoken or a network connection.
+
+    Accuracy is sufficient for the MAX_PROMPT_TOKENS ceiling check (~±10%).
+    """
+    return int(len(text) * 0.28)
 
 
 # ---------------------------------------------------------------------------

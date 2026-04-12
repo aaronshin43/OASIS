@@ -86,7 +86,7 @@ User Query
 | `TIER0_MAX_WORDS` | 3 | Tier 0 word/keyword match only for queries ≤ this many words |
 | `MULTI_LABEL_RATIO` | 0.80 | Secondary category included if score >= primary × this |
 | `MAX_CATEGORIES` | 2 | Maximum categories per query |
-| `MAX_PROMPT_TOKENS` | 400 | Hard ceiling — measured with `tiktoken` (cl100k_base), not `transformers.AutoTokenizer` (too heavy for Pi5) |
+| `MAX_PROMPT_TOKENS` | 400 | Hard ceiling — estimated with char-based approximation (0.28 chars/token), no network required |
 | `TRIAGE_HINT_BOOST` | 0.05 | Score boost applied when `prev_triage_hint` matches a category |
 | `TRIAGE_HINT_MIN_RELEVANCE` | 0.20 | Skip boost if query cosine sim to hint < this; handles topic-shift in Python |
 | `TRIAGE_HINT_TTL_SEC` | 60 | Hint expiry in seconds — managed by TypeScript layer |
