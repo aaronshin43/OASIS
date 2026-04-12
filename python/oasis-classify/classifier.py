@@ -63,7 +63,16 @@ def _get_model():
     global _model
     if _model is None:
         from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer(EMBEDDING_MODEL)
+        try:
+            _model = SentenceTransformer(EMBEDDING_MODEL)
+        except Exception as e:
+            raise RuntimeError(
+                f"[Classify] Failed to load embedding model '{EMBEDDING_MODEL}'.\n"
+                f"  If offline: run once with WiFi to cache the model:\n"
+                f"    HF_HUB_OFFLINE=0 TRANSFORMERS_OFFLINE=0 python -c \""
+                f"from sentence_transformers import SentenceTransformer; SentenceTransformer('{EMBEDDING_MODEL}')\"\n"
+                f"  Original error: {e}"
+            ) from e
     return _model
 
 

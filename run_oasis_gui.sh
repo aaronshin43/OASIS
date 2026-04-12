@@ -25,9 +25,15 @@ if [ "${SERVE_OLLAMA:-false}" = "true" ]; then
 fi
 
 # Classify service (:5002)
-echo "Starting classify service..."
-python3 python/oasis-classify/service.py > /tmp/oasis_classify.log 2>&1 &
-CLASSIFY_PID=$!
+# If the systemd unit is active, reuse it; otherwise start in-process.
+CLASSIFY_PID=""
+if systemctl is-active --quiet oasis-classify 2>/dev/null; then
+    echo "Classify service already running (systemd)."
+else
+    echo "Starting classify service..."
+    python3 python/oasis-classify/service.py > /tmp/oasis_classify.log 2>&1 &
+    CLASSIFY_PID=$!
+fi
 
 # Faster-whisper ASR (:8803)
 ASR_LOG=/tmp/oasis_asr.log
@@ -35,15 +41,23 @@ echo "Starting ASR service... (log: $ASR_LOG)"
 python3 python/speech-service/faster-whisper-host.py --port "${FASTER_WHISPER_PORT:-8803}" > "$ASR_LOG" 2>&1 &
 ASR_PID=$!
 
-# Wait for classify service health (up to 30s)
+# Wait for classify service health (up to 60s — cold model load on Pi can take 30-50s)
 echo "Waiting for classify service..."
-for i in $(seq 1 10); do
+classify_ready=false
+for i in $(seq 1 20); do
     if curl -sf http://127.0.0.1:5002/health >/dev/null 2>&1; then
         echo "Classify service ready (${i}x3s elapsed)."
+        classify_ready=true
         break
     fi
     sleep 3
 done
+
+if [ "$classify_ready" = "false" ]; then
+    echo "WARNING: Classify service did not start in 60s."
+    [ -f /tmp/oasis_classify.log ] && tail -20 /tmp/oasis_classify.log
+    journalctl -u oasis-classify -n 20 2>/dev/null || true
+fi
 
 # Wait for ASR service health (up to 60s — whisper model load takes ~10s on Pi)
 echo "Waiting for ASR service..."
@@ -74,7 +88,8 @@ EXIT_CODE=$?
 echo "Shutting down services..."
 pkill -f "faster-whisper-host" 2>/dev/null || true
 pkill sox 2>/dev/null || true
-kill "$CLASSIFY_PID" "$ASR_PID" 2>/dev/null || true
+[ -n "$CLASSIFY_PID" ] && kill "$CLASSIFY_PID" 2>/dev/null || true
+[ -n "$ASR_PID" ] && kill "$ASR_PID" 2>/dev/null || true
 if [ -n "$OLLAMA_PID" ]; then kill "$OLLAMA_PID" 2>/dev/null || true; fi
 
 exit $EXIT_CODE
